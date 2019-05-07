@@ -1,31 +1,27 @@
 import os
 from PIL import Image
-from torch.utils import data as data_utils
 from torch.utils.data import Dataset
-from torchvision import datasets as torch_datasets
-from torchvision import transforms
 import pandas as pd
 
-class SealDataset(Dataset):
 
-    def __init__(self, csv_file, root_dir, transform=None):
+class SealDataset(Dataset):
+    def __init__(self, csv_file, root_dir, transform=None, data_filter=None):
+        self.current_sample = None
+        self.label_names = ["Ringed Seal", "Bearded Seal", "UNK Seal"]
 
         numeric_cols = ["thermal_x", "thermal_y", "color_left", "color_top",
                           "color_right", "color_bottom", "updated_left",
                           "updated_top", "updated_right", "updated_bottom"]
-        self.hotspot_data = pd.read_csv(csv_file)
-
-        # remove hotspots that I labeled "removed"
-        self.hotspot_data = self.hotspot_data[~self.hotspot_data.status.str.contains("removed")]
+        self.data = pd.read_csv(csv_file)
         # cast numeric columns
-        self.hotspot_data[numeric_cols] = \
-            self.hotspot_data[numeric_cols].apply(pd.to_numeric)
+        self.data[numeric_cols] = \
+            self.data[numeric_cols].apply(pd.to_numeric)
 
-        self.updated_hotspots = self.hotspot_data[self.hotspot_data.updated == True]
+        if data_filter:
+            self.data = data_filter(self.data)
 
-        self.updated_seals = self.updated_hotspots[self.updated_hotspots.species_id.str.contains("Seal")]
 
-        self.images = self.updated_seals.color_image.unique()
+        self.images = self.data.color_image.unique()
 
         self.root_dir = root_dir
         self.transform = transform
@@ -43,24 +39,24 @@ class SealDataset(Dataset):
         except:
             print("Failed to load: %s" % full_img_path)
 
-        hotspots = self.updated_hotspots[self.updated_hotspots.color_image == img_base_name]
-        bboxes = []
+        hotspots = self.data[self.data.color_image == img_base_name]
+        print(hotspots.shape)
+        boxes = []
         labels = []
         for index, hs in hotspots.iterrows():
-            bboxes.append([hs.updated_left, hs.updated_top, hs.updated_right, hs.updated_bottom])
-            labels.append(hs.species_id)
-        print(len(hotspots))
+            boxes.append([hs.updated_left, hs.updated_top, hs.updated_right, hs.updated_bottom])
+            labels.append(self.get_label(hs.species_id))
 
-        sample = {'image': image, 'labels': labels, 'boxes': bboxes}
+
+        sample = {'image':image, 'labels': labels, 'boxes': boxes}
 
         if self.transform:
             sample = self.transform(sample)
 
+        self.current_sample = sample
         return sample
 
-seal_dataset = SealDataset(csv_file='data/TrainingAnimals_WithSightings_updating.csv',
-                                    root_dir='/data/raw_data/TrainingAnimals_ColorImages/')
 
-for i in range(len(seal_dataset)):
-    sample = seal_dataset[i]
-    x = 1
+    def get_label(self, name):
+        return self.label_names.index(name)
+
