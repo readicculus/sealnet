@@ -1,8 +1,8 @@
 import numpy as np
 import imgaug as ia
 from imgaug import augmenters as iaa
-from data import SealDataset
-from dataset.crops import get_tile_images
+from dataset.data import SealDataset
+from dataset.transforms.crops import get_tile_images
 
 
 # Create a dataset of chips with respective label files

@@ -1,6 +1,6 @@
 from random import randint
 
-
+# Create a new dataset
 def get_tile_images(image, width=640, height=640):
     _nrows, _ncols, depth = image.shape
     _size = image.size
