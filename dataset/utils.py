@@ -1,3 +1,5 @@
+import subprocess
+
 import numpy as np
 import pandas as pd
 
@@ -13,3 +15,6 @@ def test_train_split_by_image(dataset, train_ratio = .8):
     train = dataset.data[dataset.data.color_image.isin(train_images)]
     test = dataset.data[dataset.data.color_image.isin(test_images)]
     return train, test
+
+def get_git_revisions_hash():
+     return subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip()
