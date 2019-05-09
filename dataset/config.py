@@ -14,7 +14,6 @@ class obj(object):
 
 config = {
     "chip_size" : [640,640],
-    "split_list": "testtrainsplit.txt",
     "dataset": "optical",
     "types": ["optical", "ir", "registered"],
     "generated_data_base": "",
