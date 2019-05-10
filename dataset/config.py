@@ -3,7 +3,6 @@ import os
 from torchvision.transforms import Compose
 from transforms.filter_transforms import *
 from utils import get_git_revisions_hash
-import configparser
 
 
 

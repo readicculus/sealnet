@@ -1,7 +1,7 @@
 import os
 
 import config as config
-from data import SealDataset
+from csvloader import SealDataset
 from utils import test_train_split_by_image, get_git_revisions_hash
 import pickle
 

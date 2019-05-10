@@ -12,7 +12,7 @@ class SealDataset(Dataset):
         numeric_cols = ["thermal_x", "thermal_y", "color_left", "color_top",
                           "color_right", "color_bottom", "updated_left",
                           "updated_top", "updated_right", "updated_bottom"]
-        self.data = pd.read_csv(csv_file)
+        self.data = pd.read_csv(csv_file, dtype={'hotspot_id': object})
         # cast numeric columns
         self.data[numeric_cols] = \
             self.data[numeric_cols].apply(pd.to_numeric)
@@ -40,12 +40,13 @@ class SealDataset(Dataset):
             print("Failed to load: %s" % full_img_path)
 
         hotspots = self.data[self.data.color_image == img_base_name]
-        print(hotspots.shape)
+
         boxes = []
         labels = []
+        hs_ids = []
         for index, hs in hotspots.iterrows():
             boxes.append([hs.updated_left, hs.updated_top, hs.updated_right, hs.updated_bottom])
-            labels.append(self.get_label(hs.species_id))
+            labels.append((self.get_label(hs.species_id), hs.hotspot_id))
 
 
         sample = {'image':image, 'labels': labels, 'boxes': boxes}

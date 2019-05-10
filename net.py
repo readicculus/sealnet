@@ -1,5 +1,5 @@
 from dataset.crops import get_tile_images
-from data import SealDataset
+from csvloader import SealDataset
 
 
 import numpy as np

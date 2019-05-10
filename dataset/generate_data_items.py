@@ -1,9 +1,17 @@
 import os
+import sys
+import numpy as np
 import warnings
+
+from PIL import Image
+
+from transforms.crops import crop_around_hotspots
 from utils import get_git_revisions_hash
 import pickle
-from data import SealDataset
+from csvloader import SealDataset
 import argparse
+from imgaug import BoundingBox, BoundingBoxesOnImage
+import pandas as pd
 
 parser = argparse.ArgumentParser(description='Process images for new dataset')
 parser.add_argument('-c', '--config', dest='config_path', required=True)
@@ -32,22 +40,64 @@ test_base = os.path.join(dataset_base, "test")
 
 # Check required outline files exist
 if not os.path.exists(dataset_base):
-    raise Exception("specified dataset " + dataset_base + " does not exist.")
+    raise Exception("specified dataset {} does not exist.".format(dataset_base))
 if not os.path.isfile(train_list):
-    raise Exception("specified train list " + train_list + " does not exist.")
+    raise Exception("specified train list {} does not exist.".format(train_list))
 if not os.path.isfile(test_list):
-    raise Exception("specified test list " + test_list + " does not exist.")
+    raise Exception("specified test list {} does not exist.".format(test_list))
+
 # create train/test directories
+if os.path.exists(train_base):
+    warnings.warn("train directory {} already exists.".format(train_base))
+if os.path.exists(test_base):
+    warnings.warn("test directory {} already exists.".format(test_base))
 if not os.path.exists(train_base):
     os.makedirs(train_base)
 if not os.path.exists(test_base):
     os.makedirs(test_base)
 
+# load train and test dataset
 train_dataset = SealDataset(csv_file=train_list, root_dir='/data/raw_data/TrainingAnimals_ColorImages/')
 test_dataset = SealDataset(csv_file=test_list, root_dir='/data/raw_data/TrainingAnimals_ColorImages/')
 
+metadata = {}
+for i, hs in enumerate(train_dataset):
+    if i > 100:
+        break
+    labels = hs["labels"]
+    boxes = hs["boxes"]
+    image = hs["image"]
+    image = np.asarray(image)
 
+    bb = []
+    for box, label in zip(boxes, labels):
+        bb.append(BoundingBox(x1=box[0], y1=box[1], x2=box[2], y2=box[3], label=label))
+    bbs = BoundingBoxesOnImage(bb, shape=image.shape)
+    chips = crop_around_hotspots(bbs, config.chip_size)
 
+    for chip_idx, chip in enumerate(chips):
+        crop = chip[0]
+        hotspots = chip[1]
+        cropped_image = image[int(crop.y1): int(crop.y2),
+                        int(crop.x1):int(crop.x2)].astype(np.uint8)
+        new_bbs = []
+        for hs in hotspots:
+            new_bbs.append(hs.shift(left=-crop.x1, top = -crop.y1))
+
+        for bb in new_bbs:
+            cropped_image=bb.draw_on_image(cropped_image, size=10, color=[255, 0, 0])
+
+        chip_metadata = {"chip_edges": crop, "hotspots": hotspots}
+        file_name = "%d-%d.jpg"%(i,chip_idx)
+        metadata[file_name] = chip_metadata
+        img = Image.fromarray(cropped_image, 'RGB')
+        img.save(os.path.join(train_base, file_name))
+        # if __debug__:
+
+filehandler = open(os.path.join(train_base, "metadata.pickle"), 'wb')
+pickle.dump(metadata, filehandler)
+pickle_file = open(os.path.join(train_base, "metadata.pickle"), 'rb')
+test = pickle.load(pickle_file)
 print("Loaded test/train files %d / %d" % (len(test_dataset), len(train_dataset)))
 
 
