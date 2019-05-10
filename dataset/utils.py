@@ -48,3 +48,23 @@ class obj(object):
                setattr(self, a, [obj(x) if isinstance(x, dict) else x for x in b])
             else:
                setattr(self, a, obj(b) if isinstance(b, dict) else b)
+
+
+import time
+import datetime
+
+
+class Timer(object):
+    def __init__(self, total):
+        self.start = datetime.datetime.now()
+        self.total = total
+
+    def remains(self, done):
+        now = datetime.datetime.now()
+        # print(now-start)  # elapsed time
+        left = (self.total - done) * (now - self.start) / done
+        sec = int(left.total_seconds())
+        if sec < 60:
+            return "{} seconds".format(sec)
+        else:
+            return "{} minutes".format(int(sec / 60))

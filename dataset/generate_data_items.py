@@ -5,7 +5,7 @@ import warnings
 from PIL import Image
 
 from transforms.crops import crop_around_hotspots
-from utils import get_git_revisions_hash
+from utils import get_git_revisions_hash, Timer
 import pickle
 from csvloader import SealDataset
 import argparse
@@ -64,8 +64,12 @@ test_dataset = SealDataset(csv_file=test_list, root_dir='/data/raw_data/Training
 def process_and_create_dataset(dataset, base, type):
     print("Generating %s set--------------------" % type)
     metadata = {}
+    timer = Timer(len(dataset))
+    time_remaining = 0
     for i, hs in enumerate(dataset):
-        print("%.3f%% complete"%(i/len(dataset) * 100), sep='', end='\r', flush=True)
+        if i != 0 and i%10 == 0:
+            time_remaining = timer.remains(i)
+        print("%.3f%% complete, %s"%(i/len(dataset) * 100, time_remaining), sep='', end='\r', flush=True)
         labels = hs["labels"]
         boxes = hs["boxes"]
         image = hs["image"]
