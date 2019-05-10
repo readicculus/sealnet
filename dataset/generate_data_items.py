@@ -1,5 +1,4 @@
 import os
-import sys
 import numpy as np
 import warnings
 
@@ -11,12 +10,14 @@ import pickle
 from csvloader import SealDataset
 import argparse
 from imgaug import BoundingBox, BoundingBoxesOnImage
-import pandas as pd
+from utils import obj
 
 parser = argparse.ArgumentParser(description='Process images for new dataset')
 parser.add_argument('-c', '--config', dest='config_path', required=True)
+parser.add_argument('-d', '--debug',  default=False, action='store_true')
 
 args = parser.parse_args()
+DEBUG = args.debug
 
 # Load the configuration
 config = None
@@ -60,44 +61,46 @@ if not os.path.exists(test_base):
 train_dataset = SealDataset(csv_file=train_list, root_dir='/data/raw_data/TrainingAnimals_ColorImages/')
 test_dataset = SealDataset(csv_file=test_list, root_dir='/data/raw_data/TrainingAnimals_ColorImages/')
 
-metadata = {}
-for i, hs in enumerate(train_dataset):
-    if i > 100:
-        break
-    labels = hs["labels"]
-    boxes = hs["boxes"]
-    image = hs["image"]
-    image = np.asarray(image)
+def process_and_create_dataset(dataset, base):
+    metadata = {}
+    for i, hs in enumerate(dataset):
+        labels = hs["labels"]
+        boxes = hs["boxes"]
+        image = hs["image"]
+        image = np.asarray(image)
 
-    bb = []
-    for box, label in zip(boxes, labels):
-        bb.append(BoundingBox(x1=box[0], y1=box[1], x2=box[2], y2=box[3], label=label))
-    bbs = BoundingBoxesOnImage(bb, shape=image.shape)
-    chips = crop_around_hotspots(bbs, config.chip_size)
+        bb = []
+        for box, label in zip(boxes, labels):
+            bb.append(BoundingBox(x1=box[0], y1=box[1], x2=box[2], y2=box[3], label=label))
+        bbs = BoundingBoxesOnImage(bb, shape=image.shape)
+        chips = crop_around_hotspots(bbs, config.chip_size)
 
-    for chip_idx, chip in enumerate(chips):
-        crop = chip[0]
-        hotspots = chip[1]
-        cropped_image = image[int(crop.y1): int(crop.y2),
-                        int(crop.x1):int(crop.x2)].astype(np.uint8)
-        new_bbs = []
-        for hs in hotspots:
-            new_bbs.append(hs.shift(left=-crop.x1, top = -crop.y1))
+        for chip_idx, chip in enumerate(chips):
+            crop = chip[0]
+            hotspots = chip[1]
+            cropped_image = image[int(crop.y1): int(crop.y2),
+                            int(crop.x1):int(crop.x2)].astype(np.uint8)
+            new_bbs = []
+            for hs in hotspots:
+                new_bb = hs.shift(left=-crop.x1, top = -crop.y1).clip_out_of_image(cropped_image.shape)
+                new_bbs.append(new_bb)
 
-        for bb in new_bbs:
-            cropped_image=bb.draw_on_image(cropped_image, size=10, color=[255, 0, 0])
 
-        chip_metadata = {"chip_edges": crop, "hotspots": hotspots}
-        file_name = "%d-%d.jpg"%(i,chip_idx)
-        metadata[file_name] = chip_metadata
-        img = Image.fromarray(cropped_image, 'RGB')
-        img.save(os.path.join(train_base, file_name))
-        # if __debug__:
+            chip_metadata = obj({"crop": crop, "hotspots": new_bbs})
+            file_name = "%d-%d.jpg"%(i,chip_idx)
+            metadata[file_name] = chip_metadata
+            if DEBUG:
+                for bb in new_bbs:
+                    cropped_image = bb.draw_on_image(cropped_image, size=10, color=[255, 0, 0])
+            img = Image.fromarray(cropped_image, 'RGB')
+            img.save(os.path.join(base, file_name))
 
-filehandler = open(os.path.join(train_base, "metadata.pickle"), 'wb')
-pickle.dump(metadata, filehandler)
-pickle_file = open(os.path.join(train_base, "metadata.pickle"), 'rb')
-test = pickle.load(pickle_file)
+    filehandler = open(os.path.join(base, "metadata.pickle"), 'wb')
+    pickle.dump(metadata, filehandler)
+
+
+process_and_create_dataset(train_dataset, train_base)
+process_and_create_dataset(test_dataset, test_base)
 print("Loaded test/train files %d / %d" % (len(test_dataset), len(train_dataset)))
 
 

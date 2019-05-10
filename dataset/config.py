@@ -2,18 +2,7 @@ import os
 
 from torchvision.transforms import Compose
 from transforms.filter_transforms import *
-from utils import get_git_revisions_hash
-
-
-
-class obj(object):
-    def __init__(self, d):
-        for a, b in d.items():
-            if isinstance(b, (list, tuple)):
-               setattr(self, a, [obj(x) if isinstance(x, dict) else x for x in b])
-            else:
-               setattr(self, a, obj(b) if isinstance(b, dict) else b)
-
+from utils import get_git_revisions_hash, obj
 
 config = {
     "chip_size" : [640,640],

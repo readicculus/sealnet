@@ -1,4 +1,3 @@
-from operator import itemgetter
 from random import randint
 import numpy as np
 from imgaug import BoundingBox, BoundingBoxesOnImage
@@ -9,9 +8,17 @@ def random_shift(max):
 
 def bbox_is_in(parent, child):
     return parent.contains((child.x1, child.y1)) and parent.contains((child.x2, child.y2))
-def crop_around_hotspots(bbs, crop_size):
-    h,w,c = bbs.shape
 
+# threshold of how much of the child box needs to be in the parent box for it to be counted as
+# in the image
+def bbox_is_partially_in(parent, child, thresh=0.25):
+    intersection = child.intersection(parent)
+    if not intersection:
+        return False
+
+    return  intersection.area > thresh * child.area
+
+def crop_around_hotspots(bbs, crop_size):
     chips = []
     for bbox_idx, bbox in enumerate(bbs.bounding_boxes):
         center_x = bbox.center_x
@@ -37,7 +44,7 @@ def crop_around_hotspots(bbs, crop_size):
             if bbox_idx2 == bbox_idx:
                 continue
 
-            if bbox_is_in(crop_box, bbox2):
+            if bbox_is_in(crop_box, bbox2) or bbox_is_partially_in(crop_box, bbox2):
                 others_in_same_chip_idx.append(bbox_idx2)
                 others_in_same_chip.append(bbs.bounding_boxes[bbox_idx2])
 
