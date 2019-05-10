@@ -2,6 +2,8 @@ import argparse
 import os
 import pickle
 
+from utils import get_train_test_meta_data, get_train_test_base
+
 parser = argparse.ArgumentParser(description='Process images for new dataset')
 parser.add_argument('-c', '--config', dest='config_path', required=True)
 
@@ -17,19 +19,8 @@ try:
 except:
     raise Exception("Could not load file " + pickle_file_path)
 
-
-dataset_base = os.path.join(config.generated_data_base, str(config.dataset_id))
-train_list = os.path.join(dataset_base, config.system.train_list)
-test_list = os.path.join(dataset_base, config.system.test_list)
-train_base = os.path.join(dataset_base, "train")
-test_base = os.path.join(dataset_base, "test")
-
-
-f_tr = open(os.path.join(train_base, "metadata.pickle"), 'rb')
-f_te = open(os.path.join(test_base, "metadata.pickle"), 'rb')
-train_meta = pickle.load(f_tr)
-test_meta = pickle.load(f_te)
-
+train_base, test_base = get_train_test_base(config)
+train_meta, test_meta = get_train_test_meta_data(config)
 
 def yolo_labels(meta, base):
     for image in meta:

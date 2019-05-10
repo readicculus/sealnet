@@ -35,9 +35,10 @@ def crop_around_hotspots(bbs, crop_size):
 
             crop_box = BoundingBox(x1 = center_x-half[0], y1=center_y-half[0],x2 = center_x+half[0], y2=center_y+half[0])
             count+=1
-        if count != 0:
-            print(count)
 
+        if not crop_box.is_fully_within_image(bbs.shape):
+            print("Skipped %s" % bbox.label[1])
+            continue
         others_in_same_chip_idx = []
         others_in_same_chip = []
         for bbox_idx2, bbox2 in enumerate(bbs.bounding_boxes):
@@ -50,9 +51,7 @@ def crop_around_hotspots(bbs, crop_size):
 
 
         hotspots = [bbox] + others_in_same_chip
-        print("hs %d" % len(hotspots))
         chips.append((crop_box, hotspots))
-    print("chips %d" % len(chips))
 
     return chips
 

@@ -61,9 +61,11 @@ if not os.path.exists(test_base):
 train_dataset = SealDataset(csv_file=train_list, root_dir='/data/raw_data/TrainingAnimals_ColorImages/')
 test_dataset = SealDataset(csv_file=test_list, root_dir='/data/raw_data/TrainingAnimals_ColorImages/')
 
-def process_and_create_dataset(dataset, base):
+def process_and_create_dataset(dataset, base, type):
+    print("Generating %s set--------------------" % type)
     metadata = {}
     for i, hs in enumerate(dataset):
+        print("%.3f%% complete"%(i/len(dataset) * 100), sep='', end='\r', flush=True)
         labels = hs["labels"]
         boxes = hs["boxes"]
         image = hs["image"]
@@ -99,8 +101,8 @@ def process_and_create_dataset(dataset, base):
     pickle.dump(metadata, filehandler)
 
 
-process_and_create_dataset(train_dataset, train_base)
-process_and_create_dataset(test_dataset, test_base)
+process_and_create_dataset(train_dataset, train_base, "Train")
+process_and_create_dataset(test_dataset, test_base, "Test")
 print("Loaded test/train files %d / %d" % (len(test_dataset), len(train_dataset)))
 
 

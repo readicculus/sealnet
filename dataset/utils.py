@@ -1,3 +1,5 @@
+import os
+import pickle
 import subprocess
 
 import numpy as np
@@ -18,6 +20,26 @@ def test_train_split_by_image(dataset, train_ratio = .8):
 
 def get_git_revisions_hash():
      return subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip()
+
+def get_train_test_base(config):
+    dataset_base = os.path.join(config.generated_data_base, str(config.dataset_id))
+    train_base = os.path.join(dataset_base, "train")
+    test_base = os.path.join(dataset_base, "test")
+    return train_base, test_base
+
+# get_train_test_list
+def get_train_test_meta_data(config):
+    dataset_base = os.path.join(config.generated_data_base, str(config.dataset_id))
+
+    train_base = os.path.join(dataset_base, "train")
+    test_base = os.path.join(dataset_base, "test")
+
+    f_tr = open(os.path.join(train_base, "metadata.pickle"), 'rb')
+    f_te = open(os.path.join(test_base, "metadata.pickle"), 'rb')
+    train_meta = pickle.load(f_tr)
+    test_meta = pickle.load(f_te)
+
+    return train_meta, test_meta
 
 class obj(object):
     def __init__(self, d):

@@ -30,7 +30,7 @@ pickle.dump(config, filehandler)
 seal_dataset = SealDataset(csv_file='data/TrainingAnimals_WithSightings_updating.csv',
                            root_dir='/data/raw_data/TrainingAnimals_ColorImages/', data_filters=config.transforms)
 
-train, test = test_train_split_by_image(seal_dataset, .5)
+train, test = test_train_split_by_image(seal_dataset, .8)
 
 with open(os.path.join(dataset_base,config.system.test_list), "w") as text_file:
     text_file.write(test.to_csv(index=False))
