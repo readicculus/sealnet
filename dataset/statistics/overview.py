@@ -32,10 +32,12 @@ def print_overview(meta, type):
                 class_distribution[class_id] = 0
             class_distribution[class_id] += 1
             total += 1
+    print("Total crops: %d" % len(meta))
     print("Total hotspots: %d" % total)
+    print("Density: %.2f" % (total/len(meta)))
     for c in class_distribution:
         count = class_distribution[c]
-        print("%d: %d - %.3f%%" %(c, count, count/total))
+        print("%d: %d - %.2f%%" %(c, count, count/total * 100))
 
 
 print_overview(train_meta, "Train")
