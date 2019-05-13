@@ -9,9 +9,9 @@ from torch.utils import data as data_utils
 import numpy as np
 from torchvision.transforms import transforms
 import torch.nn.functional as F
-
-import dataset.utils as utils
+import dataset.utils as utilsx
 import dataset.transforms as transformsx
+from models.ConfigDataset import ConfigDataset
 from models.yolov3.utils.augmentations import horisontal_flip
 
 def pad_to_square(img, pad_value):
@@ -30,32 +30,23 @@ def resize(image, size):
     image = F.interpolate(image.unsqueeze(0), size=size, mode="nearest").squeeze(0)
     return image
 
-class TrainLoader(Dataset):
-    def __init__(self, config, img_size=640, augment=True, multiscale=True, normalized_labels=True):
-        try:
-            sys.modules['utils'] = utils
-            sys.modules['transforms'] = transformsx
-            pickle_file = open(config, 'rb')
-            config = pickle.load(pickle_file)
-        except:
-            raise Exception("Could not load file " + config)
+class YoloLoader(ConfigDataset):
+    def __init__(self, config, type, img_size=640, augment=True, multiscale=True, normalized_labels=True):
+        ConfigDataset.__init__(self, config, type)
 
-        self.train_meta, _ = utils.get_train_test_meta_data(config)
-
-        self.train_path, _ = utils.get_train_test_base(config)
-        self.images = list(self.train_meta.keys())
+        self.images = list(self.meta_data.keys())
         self.batch_count = 0
         self.img_size = img_size
         self.normalized_labels = normalized_labels
         self.augment = augment
-        self.size = len(self.train_meta)
+        self.size = len(self.meta_data)
 
     def __len__(self):
         return self.size
 
     def __getitem__(self, idx):
         img_name = self.images[idx]
-        image_path = os.path.join(self.train_path, img_name)
+        image_path = os.path.join(self.path, img_name)
         img = transforms.ToTensor()(Image.open(image_path).convert('RGB')).float()
         _, h, w = img.shape
         h_factor, w_factor = (h, w) if self.normalized_labels else (1, 1)
@@ -63,7 +54,7 @@ class TrainLoader(Dataset):
         img, pad = pad_to_square(img, 0)
         _, padded_h, padded_w = img.shape
 
-        hotspots = self.train_meta[img_name].hotspots
+        hotspots = self.meta_data[img_name].hotspots
         hs_mat = np.zeros((len(hotspots), 6))
         for i, hs in enumerate(hotspots):
             cx = ((hs.x1 + hs.x2)/2)/padded_w
@@ -95,8 +86,8 @@ class TrainLoader(Dataset):
         self.batch_count += 1
         return paths, imgs, targets
 
-def get_train_loader(config, batch_size, num_workers):
-    train_dataset = TrainLoader(config)
+def get_data_loader(config, type, batch_size, num_workers):
+    train_dataset = YoloLoader(config, type)
     return data_utils.DataLoader(
         train_dataset, shuffle=True, batch_size=batch_size, pin_memory=True,
         num_workers=num_workers, collate_fn=train_dataset.collate_fn)

@@ -4,6 +4,9 @@ import datetime
 import time
 
 # must be set before torch import
+from model import Darknet
+from test import evaluate
+
 os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
 import torch
@@ -11,13 +14,11 @@ from torch.autograd import Variable
 
 from terminaltables import AsciiTable
 
-from models.yolov3.models import Darknet
-# from models.yolov3.test import evaluate
-from models.yolov3.utils.logger import Logger
-from models.yolov3.utils.utils import weights_init_normal
-from models.yolov3.yolo_loader import get_train_loader
-# from terminaltables import AsciiTable
+from utils.logger import Logger
+from yolo_loader import get_data_loader
+from utils.utils import weights_init_normal
 
+# from terminaltables import AsciiTable
 
 
 parser = argparse.ArgumentParser(description='Process images for new dataset')
@@ -33,7 +34,8 @@ model.apply(weights_init_normal)
 model.load_darknet_weights("/data/pretrained_weights/darknet53.conv.74")
 
 print("GPUS" + os.environ["CUDA_VISIBLE_DEVICES"])
-dataloader = get_train_loader(args.config_path, 4, 8)
+train_data = get_data_loader(args.config_path, "train", 4, 8)
+test_data = get_data_loader(args.config_path, "test", 1, 8)
 
 optimizer = torch.optim.Adam(model.parameters())
 
@@ -65,10 +67,10 @@ for epoch in range(EPOCHS):
     model.train()
     start_time = time.time()
     print(epoch)
-    for batch_i, (_, imgs, targets) in enumerate(dataloader):
+    for batch_i, (_, imgs, targets) in enumerate(train_data):
         print(batch_i)
 
-        batches_done = len(dataloader) * epoch + batch_i
+        batches_done = len(train_data) * epoch + batch_i
         imgs = Variable(imgs.to(device))
         targets = Variable(targets.to(device), requires_grad=False)
 
@@ -78,7 +80,7 @@ for epoch in range(EPOCHS):
             optimizer.step()
             optimizer.zero_grad()
 
-        log_str = "\n---- [Epoch %d/%d, Batch %d/%d] ----\n" % (epoch, EPOCHS, batch_i, len(dataloader))
+        log_str = "\n---- [Epoch %d/%d, Batch %d/%d] ----\n" % (epoch, EPOCHS, batch_i, len(train_data))
 
         metric_table = [["Metrics", *[f"YOLO Layer {i}" for i in range(len(model.yolo_layers))]]]
 
@@ -103,7 +105,7 @@ for epoch in range(EPOCHS):
         log_str += f"\nTotal loss {loss.item()}"
 
         # Determine approximate time left for epoch
-        epoch_batches_left = len(dataloader) - (batch_i + 1)
+        epoch_batches_left = len(train_data) - (batch_i + 1)
         time_left = datetime.timedelta(seconds=epoch_batches_left * (time.time() - start_time) / (batch_i + 1))
         log_str += f"\n---- ETA {time_left}"
 
@@ -116,7 +118,7 @@ for epoch in range(EPOCHS):
             # Evaluate the model on the validation set
             precision, recall, AP, f1, ap_class = evaluate(
                 model,
-                path=valid_path,
+                path=test_data,
                 iou_thres=0.5,
                 conf_thres=0.5,
                 nms_thres=0.5,

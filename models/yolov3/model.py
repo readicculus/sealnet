@@ -9,8 +9,9 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from models.yolov3.utils.parse_config import parse_model_config
-from models.yolov3.utils.utils import to_cpu, build_targets
+
+from utils.utils.parse_config import parse_model_config
+from utils.utils import to_cpu, build_targets
 
 
 def create_modules(module_defs):
