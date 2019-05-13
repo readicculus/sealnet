@@ -4,13 +4,14 @@ import warnings
 
 from PIL import Image
 
-from transforms.crops import crop_around_hotspots
-from utils import get_git_revisions_hash, Timer
+from dataset.transforms.crops import crop_around_hotspots
+from dataset.utils import get_git_revisions_hash, Timer
 import pickle
-from csvloader import SealDataset
+from dataset.csvloader import SealDataset
 import argparse
 from imgaug import BoundingBox, BoundingBoxesOnImage
-from utils import obj
+
+from dataset.utils import obj
 
 parser = argparse.ArgumentParser(description='Process images for new dataset')
 parser.add_argument('-c', '--config', dest='config_path', required=True)

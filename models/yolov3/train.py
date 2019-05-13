@@ -1,20 +1,30 @@
+import os
 import argparse
 import datetime
-import os
 import time
 
+# must be set before torch import
+os.environ["CUDA_VISIBLE_DEVICES"] = '1'
+
 import torch
-import torchvision.models as models
-from terminaltables import AsciiTable
-from torch import nn
 from torch.autograd import Variable
+
+from terminaltables import AsciiTable
 
 from models.yolov3.models import Darknet
 # from models.yolov3.test import evaluate
 from models.yolov3.utils.logger import Logger
 from models.yolov3.utils.utils import weights_init_normal
-from train_loader import get_train_loader
+from models.yolov3.yolo_loader import get_train_loader
 # from terminaltables import AsciiTable
+
+
+
+parser = argparse.ArgumentParser(description='Process images for new dataset')
+parser.add_argument('-c', '--config', dest='config_path', required=True)
+parser.add_argument('-gpu', type=int, default=[1], nargs='+', help='used gpu')
+args = parser.parse_args()
+
 
 logger = Logger("logs")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -22,16 +32,8 @@ model = Darknet("/home/yuval/Documents/XNOR/sealnet/models/yolov3/yolov3.cfg", i
 model.apply(weights_init_normal)
 model.load_darknet_weights("/data/pretrained_weights/darknet53.conv.74")
 
-parser = argparse.ArgumentParser(description='Process images for new dataset')
-parser.add_argument('-c', '--config', dest='config_path', required=True)
-parser.add_argument('-gpu', type=int, default=[1], nargs='+', help='used gpu')
-args = parser.parse_args()
-
-# os.environ["CUDA_VISIBLE_DEVICES"] = ''.join(str(x) for x in args.gpu)
-os.environ["CUDA_VISIBLE_DEVICES"] = '12'
-
 print("GPUS" + os.environ["CUDA_VISIBLE_DEVICES"])
-dataloader = get_train_loader(args.config_path, 2, 8)
+dataloader = get_train_loader(args.config_path, 4, 8)
 
 optimizer = torch.optim.Adam(model.parameters())
 
@@ -57,8 +59,9 @@ IM_SIZE = 640
 EVAL_INTERVAL = 1
 CHKPT_INTERVAL = 10
 class_names = ["Ringed", "Bearded", "UNK"]
-
+saved = False
 for epoch in range(EPOCHS):
+    saved = False
     model.train()
     start_time = time.time()
     print(epoch)
@@ -135,5 +138,6 @@ for epoch in range(EPOCHS):
             print(AsciiTable(ap_table).table)
             print(f"---- mAP {AP.mean()}")
 
-        if epoch != 0 and epoch % CHKPT_INTERVAL == 0:
+        if not saved and epoch % CHKPT_INTERVAL == 0:
             torch.save(model.state_dict(), f"checkpoints/yolov3_ckpt_%d.pth" % epoch)
+            saved = True

@@ -1,8 +1,9 @@
 import os
 
 from torchvision.transforms import Compose
-from transforms.filter_transforms import *
-from utils import get_git_revisions_hash, obj
+
+from dataset.transforms.filter_transforms import transform_removed, transform_updated, transform_seal_only
+from dataset.utils import get_git_revisions_hash, obj
 
 config = {
     "chip_size" : [640,640],
