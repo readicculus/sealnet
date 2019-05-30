@@ -1,0 +1,3 @@
+[submodule "models/darknet"]
+	path = models/darknet
+	url = https://github.com/readicculus/darknet
