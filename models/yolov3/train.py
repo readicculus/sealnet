@@ -34,8 +34,8 @@ model.apply(weights_init_normal)
 model.load_darknet_weights("/data/pretrained_weights/darknet53.conv.74")
 
 print("GPUS" + os.environ["CUDA_VISIBLE_DEVICES"])
-train_data = get_data_loader(args.config_path, "train", 4, 8)
-test_data = get_data_loader(args.config_path, "test", 1, 8)
+train_data = get_data_loader(args.config_path, "train", 4, 16)
+test_data = get_data_loader(args.config_path, "test", 4, 8)
 
 optimizer = torch.optim.Adam(model.parameters())
 
@@ -58,24 +58,21 @@ metrics = [
 
 EPOCHS = 100
 IM_SIZE = 640
-EVAL_INTERVAL = 1
-CHKPT_INTERVAL = 10
+EVAL_INTERVAL = 20
+CHKPT_INTERVAL = 20
+GRADIENT_ACCUMULATIONS = 4
 class_names = ["Ringed", "Bearded", "UNK"]
-saved = False
 for epoch in range(EPOCHS):
-    saved = False
     model.train()
     start_time = time.time()
     print(epoch)
     for batch_i, (_, imgs, targets) in enumerate(train_data):
-        print(batch_i)
-
         batches_done = len(train_data) * epoch + batch_i
-        imgs = Variable(imgs.to(device))
-        targets = Variable(targets.to(device), requires_grad=False)
+        imgs = Variable((imgs/255.0).float().to(device))
+        targets = Variable(targets.to(device))
 
         loss, outputs = model(imgs, targets)
-        if batches_done % 2:
+        if batches_done % GRADIENT_ACCUMULATIONS:
             # Accumulates gradient before each step
             optimizer.step()
             optimizer.zero_grad()
@@ -113,33 +110,33 @@ for epoch in range(EPOCHS):
 
         model.seen += imgs.size(0)
 
-        if epoch % EVAL_INTERVAL == 0 and False:
-            print("\n---- Evaluating Model ----")
-            # Evaluate the model on the validation set
-            precision, recall, AP, f1, ap_class = evaluate(
-                model,
-                path=test_data,
-                iou_thres=0.5,
-                conf_thres=0.5,
-                nms_thres=0.5,
-                img_size=IM_SIZE,
-                batch_size=8,
-            )
-            evaluation_metrics = [
-                ("val_precision", precision.mean()),
-                ("val_recall", recall.mean()),
-                ("val_mAP", AP.mean()),
-                ("val_f1", f1.mean()),
-            ]
-            logger.list_of_scalars_summary(evaluation_metrics, epoch)
+    if epoch % EVAL_INTERVAL == 0 and epoch > 0:
+        print("\n---- Evaluating Model ----")
+        # Evaluate the model on the validation set
+        precision, recall, AP, f1, ap_class = evaluate(
+            model,
+            dataloader=test_data,
+            iou_thres=0.5,
+            conf_thres=0.5,
+            nms_thres=0.5,
+            img_size=IM_SIZE,
+            batch_size=8,
+        )
+        evaluation_metrics = [
+            ("val_precision", precision.mean()),
+            ("val_recall", recall.mean()),
+            ("val_mAP", AP.mean()),
+            ("val_f1", f1.mean()),
+        ]
+        logger.list_of_scalars_summary(evaluation_metrics, epoch)
 
-            # Print class APs and mAP
-            ap_table = [["Index", "Class name", "AP"]]
-            for i, c in enumerate(ap_class):
-                ap_table += [[c, class_names[c], "%.5f" % AP[i]]]
-            print(AsciiTable(ap_table).table)
-            print(f"---- mAP {AP.mean()}")
+        # Print class APs and mAP
+        ap_table = [["Index", "Class name", "AP"]]
+        for i, c in enumerate(ap_class):
+            ap_table += [[c, class_names[c], "%.5f" % AP[i]]]
+        print(AsciiTable(ap_table).table)
+        print(f"---- mAP {AP.mean()}")
 
-        if not saved and epoch % CHKPT_INTERVAL == 0:
-            torch.save(model.state_dict(), f"checkpoints/yolov3_ckpt_%d.pth" % epoch)
-            saved = True
+    if epoch % CHKPT_INTERVAL == 0 and epoch > 0:
+        torch.save(model.state_dict(), f"checkpoints/yolov3_ckpt_%d.pth" % epoch)
+        saved = True

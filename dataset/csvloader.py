@@ -3,11 +3,11 @@ from PIL import Image
 from torch.utils.data import Dataset
 import pandas as pd
 
-
+LABEL_NAMES = ["Ringed Seal", "Bearded Seal", "UNK Seal"]
 class SealDataset(Dataset):
     def __init__(self, csv_file, root_dir, transform=None, data_filters=None, image_transforms=None):
         self.current_sample = None
-        self.label_names = ["Ringed Seal", "Bearded Seal", "UNK Seal"]
+        self.label_names = LABEL_NAMES
 
         numeric_cols = ["thermal_x", "thermal_y", "color_left", "color_top",
                           "color_right", "color_bottom", "updated_left",

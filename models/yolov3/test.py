@@ -1,8 +1,6 @@
 from __future__ import division
 
-from utils import *
-from utils.datasets import *
-from utils.parse_config import *
+from model import Darknet
 
 import argparse
 import tqdm
@@ -12,7 +10,7 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
 from utils.parse_config import parse_data_config
-from utils.utils import non_max_suppression, get_batch_statistics, ap_per_class, xywh2xyxy
+from utils.utils import non_max_suppression, get_batch_statistics, ap_per_class, xywh2xyxy, load_classes
 
 
 def evaluate(model, dataloader, iou_thres, conf_thres, nms_thres, img_size, batch_size):
@@ -32,7 +30,7 @@ def evaluate(model, dataloader, iou_thres, conf_thres, nms_thres, img_size, batc
         targets[:, 2:] = xywh2xyxy(targets[:, 2:])
         targets[:, 2:] *= img_size
 
-        imgs = Variable(imgs.type(Tensor), requires_grad=False)
+        imgs = Variable(imgs.type(Tensor).float(), requires_grad=False)
 
         with torch.no_grad():
             outputs = model(imgs)
