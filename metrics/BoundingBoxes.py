@@ -93,15 +93,13 @@ class BoundingBoxes:
                     det2_abs = det2.getAbsoluteBoundingBox(BBFormat.XYX2Y2)
                     a=evaluator.iou(det_abs, det2_abs)
                     if a > NMS_THRESH:
-                        duplicates[i2][i] = 2
+                        duplicates[i2][i] = 2  # set to 2 if > NMS thresh
                     else:
-                        duplicates[i2][i] = 1
+                        duplicates[i2][i] = 1 # set to 1 if already see so we don't check in reverse order
 
             good_idxs = np.ones(len(dets))
             if np.sum(duplicates) > 0:
                 nms_to_filter=np.argwhere(duplicates==2)
-                # nms_to_filter[1::2, :] = nms_to_filter[1::2, ::-1]
-                # nms_to_filter = np.unique(nms_to_filter,axis=0)
                 for idxs in nms_to_filter:
                     if dets[idxs[0]].getConfidence() > dets[idxs[1]].getConfidence():
                         good_idxs[1] = 0

@@ -58,7 +58,7 @@ with open(DETECTIONS_CSV) as f:
                            )
 
         bounding_boxes.addBoundingBox(bbox)
-bounding_boxes=bounding_boxes.nms(NMS_THRESH)
+bounding_boxes=bounding_boxes.nms(NMS_THRESH) # NMS Step
 for index, row in ground_truth_data.iterrows():
     x1 = row[x1_col]
     x2 = row[x2_col]
