@@ -1,8 +1,8 @@
 import os
 
-import config as config
-from csvloader import SealDataset
-from utils import test_train_split_by_image, get_git_revisions_hash
+import dataset.config as config
+from .csvloader import SealDataset
+from .utils import test_train_split_by_image, get_git_revisions_hash
 import pickle
 
 # Generate the outline of a dataset.  What does this mean?

@@ -1,0 +1,126 @@
+from metrics.Evaluator import Evaluator
+from .BoundingBox import *
+from .utils import *
+import numpy as np
+
+
+class BoundingBoxes:
+    def __init__(self):
+        self._boundingBoxes = []
+
+    def addBoundingBox(self, bb):
+        self._boundingBoxes.append(bb)
+
+    def removeBoundingBox(self, _boundingBox):
+        for d in self._boundingBoxes:
+            if BoundingBox.compare(d, _boundingBox):
+                del self._boundingBoxes[d]
+                return
+
+    def removeAllBoundingBoxes(self):
+        self._boundingBoxes = []
+
+    def getBoundingBoxes(self):
+        return self._boundingBoxes
+
+    def getBoundingBoxByClass(self, classId):
+        boundingBoxes = []
+        for d in self._boundingBoxes:
+            if d.getClassId() == classId:  # get only specified bounding box type
+                boundingBoxes.append(d)
+        return boundingBoxes
+
+    def getClasses(self):
+        classes = []
+        for d in self._boundingBoxes:
+            c = d.getClassId()
+            if c not in classes:
+                classes.append(c)
+        return classes
+
+    def getBoundingBoxesByType(self, bbType):
+        # get only specified bb type
+        return [d for d in self._boundingBoxes if d.getBBType() == bbType]
+
+    def getBoundingBoxesByImageName(self, imageName):
+        # get only specified bb type
+        return [d for d in self._boundingBoxes if d.getImageName() == imageName]
+
+    def count(self, bbType=None):
+        if bbType is None:  # Return all bounding boxes
+            return len(self._boundingBoxes)
+        count = 0
+        for d in self._boundingBoxes:
+            if d.getBBType() == bbType:  # get only specified bb type
+                count += 1
+        return count
+
+    def clone(self):
+        newBoundingBoxes = BoundingBoxes()
+        for d in self._boundingBoxes:
+            det = BoundingBox.clone(d)
+            newBoundingBoxes.addBoundingBox(det)
+        return newBoundingBoxes
+
+    def drawAllBoundingBoxes(self, image, imageName):
+        bbxes = self.getBoundingBoxesByImageName(imageName)
+        for bb in bbxes:
+            if bb.getBBType() == BBType.GroundTruth:  # if ground truth
+                image = add_bb_into_image(image, bb, color=(0, 255, 0))  # green
+            else:  # if detection
+                image = add_bb_into_image(image, bb, color=(255, 0, 0))  # red
+        return image
+
+    def nms(self, NMS_THRESH):
+        if NMS_THRESH == 0:
+            return self
+        evaluator = Evaluator()
+        images = set()
+        newBoundingBoxes = BoundingBoxes()
+
+        for bb in self._boundingBoxes:
+            images.add(bb.getImageName())
+        for img_idx,image in enumerate(images):
+            bboxes = self.getBoundingBoxesByImageName(image)
+            gts = [bb for bb in bboxes if bb.getBBType() == BBType.GroundTruth]
+            dets = [bb for bb in bboxes if bb.getBBType() == BBType.Detected]
+            duplicates = np.zeros((len(dets), len(dets)))
+            for i, det in enumerate(dets):
+                det_abs = det.getAbsoluteBoundingBox(BBFormat.XYX2Y2)
+                for i2, det2 in enumerate(dets):
+                    if i == i2 or duplicates[i2][i] >0 or duplicates[i][i2] >0:
+                        continue
+                    det2_abs = det2.getAbsoluteBoundingBox(BBFormat.XYX2Y2)
+                    a=evaluator.iou(det_abs, det2_abs)
+                    if a > NMS_THRESH:
+                        duplicates[i2][i] = 2
+                    else:
+                        duplicates[i2][i] = 1
+
+            good_idxs = np.ones(len(dets))
+            if np.sum(duplicates) > 0:
+                nms_to_filter=np.argwhere(duplicates==2)
+                # nms_to_filter[1::2, :] = nms_to_filter[1::2, ::-1]
+                # nms_to_filter = np.unique(nms_to_filter,axis=0)
+                for idxs in nms_to_filter:
+                    if dets[idxs[0]].getConfidence() > dets[idxs[1]].getConfidence():
+                        good_idxs[1] = 0
+                    else:
+                        good_idxs[0] = 0
+
+
+            good_idxs = good_idxs.astype(np.bool)
+            for i in range(len(dets)):
+                if good_idxs[i]:
+                    newBoundingBoxes.addBoundingBox(dets[i])
+
+            for box in gts:
+                newBoundingBoxes.addBoundingBox(box)
+        return newBoundingBoxes
+
+    # def drawAllBoundingBoxes(self, image):
+    #     for gt in self.getBoundingBoxesByType(BBType.GroundTruth):
+    #         image = add_bb_into_image(image, gt ,color=(0,255,0))
+    #     for det in self.getBoundingBoxesByType(BBType.Detected):
+    #         image = add_bb_into_image(image, det ,color=(255,0,0))
+    #     return image

@@ -44,7 +44,7 @@ def yolo_labels(meta, base):
                 f.write("%s\n" % label)
     return unique_classes
 
-def image_list(meta, base, list_name = "labels.txt"):
+def image_list(meta, base, list_name = "yolo.labels"):
     list_file = os.path.join(base, list_name)
     with open(list_file, 'w') as f:
         for img_filename in meta:
