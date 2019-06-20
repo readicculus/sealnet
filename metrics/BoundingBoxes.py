@@ -7,15 +7,24 @@ import numpy as np
 class BoundingBoxes:
     def __init__(self):
         self._boundingBoxes = []
+        self._images = {}
 
     def addBoundingBox(self, bb):
         self._boundingBoxes.append(bb)
+        if not bb.getImageName() in self._images:
+            self._images[bb.getImageName()] = []
+        self._images[bb.getImageName()].append(bb)
 
     def removeBoundingBox(self, _boundingBox):
         for d in self._boundingBoxes:
             if BoundingBox.compare(d, _boundingBox):
                 del self._boundingBoxes[d]
-                return
+                break
+        for d in self._images[_boundingBox.bb.getImageName()]:
+            if BoundingBox.compare(d, _boundingBox):
+                del self._images[_boundingBox.bb.getImageName()][d]
+                break
+        return
 
     def removeAllBoundingBoxes(self):
         self._boundingBoxes = []
@@ -44,7 +53,9 @@ class BoundingBoxes:
 
     def getBoundingBoxesByImageName(self, imageName):
         # get only specified bb type
-        return [d for d in self._boundingBoxes if d.getImageName() == imageName]
+        if imageName in self._images:
+            return self._images[imageName]
+        return []
 
     def count(self, bbType=None):
         if bbType is None:  # Return all bounding boxes
@@ -71,7 +82,7 @@ class BoundingBoxes:
                 image = add_bb_into_image(image, bb, color=(255, 0, 0))  # red
         return image
 
-    def nms(self, NMS_THRESH):
+    def nms(self, NMS_THRESH, CONFIDENCE_THRESH):
         if NMS_THRESH == 0:
             return self
         evaluator = Evaluator()
@@ -83,7 +94,7 @@ class BoundingBoxes:
         for img_idx,image in enumerate(images):
             bboxes = self.getBoundingBoxesByImageName(image)
             gts = [bb for bb in bboxes if bb.getBBType() == BBType.GroundTruth]
-            dets = [bb for bb in bboxes if bb.getBBType() == BBType.Detected]
+            dets = [bb for bb in bboxes if bb.getBBType() == BBType.Detected and bb.getConfidence() >= CONFIDENCE_THRESH]
             duplicates = np.zeros((len(dets), len(dets)))
             for i, det in enumerate(dets):
                 det_abs = det.getAbsoluteBoundingBox(BBFormat.XYX2Y2)

@@ -6,15 +6,28 @@ from metrics.BoundingBoxes import BoundingBoxes
 from metrics.Evaluator import Evaluator
 from metrics.utils import CoordinatesType
 
-DETECTIONS_CSV = "/home/yuval/Documents/XNOR/VIAME/build/install/examples/darknet/detectors/results/results_optical_fullyolov3.csv"
-GROUND_TRUTH_CSV = "/home/yuval/Documents/XNOR/sealnet/data/updated_seals.csv"
-NMS_THRESH = 0
-IOUThreshold = .2
-CONFIDENCE_THRESH = .9
+import argparse
+
+parser = argparse.ArgumentParser(description='Evaluate RGB Detectors.')
+parser.add_argument('--gts', help='Ground Truth CSV Path')
+parser.add_argument('--dets', help='Viame Detections CSV Path')
+parser.add_argument('--nms', default=.5, help='nms threshold', type=float)
+parser.add_argument('--iou', default=.5, help='iou threshold', type=float)
+parser.add_argument('--conf', default=0.0, help='minimum confidence threshold', type=float)
+parser.add_argument('--detectiononly', dest='detectiononly', action='store_true', help='minimum confidence threshold')
+
+args = parser.parse_args()
+
+DETECTIONS_CSV = args.dets
+GROUND_TRUTH_CSV = args.gts
+NMS_THRESH = args.nms
+IOUThreshold = args.iou
+CONFIDENCE_THRESH = args.conf
+DETECTION_ONLY = args.detectiononly
 
 
-x1_col, x2_col, y1_col, y2_col = "updated_left","updated_right","updated_top","updated_bottom"
-# x1_col, x2_col, y1_col, y2_col = "color_left","color_right","color_top","color_bottom"
+x1_col, x2_col, y1_col, y2_col = "updated_left","updated_right","updated_top","updated_bottom"  # Use for files w/my udpated labels
+# x1_col, x2_col, y1_col, y2_col = "color_left","color_right","color_top","color_bottom"  # Use for original NOAA format
 
 # READ DATA FROM BOTH FILES INTO PANDAS
 ground_truth_data = pd.read_csv(GROUND_TRUTH_CSV, dtype={'hotspot_id': object})
@@ -52,13 +65,15 @@ with open(DETECTIONS_CSV) as f:
             label = "Ringed Seal"
         if "bearded" in label:
             label = "Bearded Seal"
+        if DETECTION_ONLY:
+            label = "Seal"
         bbox = BoundingBox(imageName=img_name, classId=label,
                            x=x1, y=y1, w=x2, h=y2, typeCoordinates=CoordinatesType.Absolute,
                            bbType=BBType.Detected, classConfidence=conf, format=BBFormat.XYX2Y2
                            )
 
         bounding_boxes.addBoundingBox(bbox)
-bounding_boxes=bounding_boxes.nms(NMS_THRESH) # NMS Step
+bounding_boxes=bounding_boxes.nms(NMS_THRESH, CONFIDENCE_THRESH) # NMS Step
 for index, row in ground_truth_data.iterrows():
     x1 = row[x1_col]
     x2 = row[x2_col]
@@ -66,6 +81,8 @@ for index, row in ground_truth_data.iterrows():
     y2 = row[y2_col]
     label = row['species_id']
     img_name = row['color_image']
+    if DETECTION_ONLY:
+        label = "Seal"
     bbox = BoundingBox(imageName=img_name, classId=label,
                        x=x1, y=y1, w=x2, h=y2, typeCoordinates=CoordinatesType.Absolute,
                        bbType=BBType.GroundTruth, format=BBFormat.XYX2Y2
@@ -83,11 +100,13 @@ for class_met in metrics:
     tps = class_met["total TP"]
     fps = class_met["total FP"]
     fns = class_met["total FN"]
+    if tps ==0 and fps == 0:
+        print("No detections for class %s" % label)
+        continue
     precision = tps/(tps+fps)
     recall = tps / (tps+fns)
     print("Precision: %f" % precision)
     print("Recall: %f" % recall)
     print("")
-
 # evaluator.PlotPrecisionRecallCurve(bounding_boxes, IOUThreshold=IOUThreshold, showAP=True)
 # x=1

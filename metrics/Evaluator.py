@@ -156,7 +156,9 @@ class Evaluator:
                 'total FN': np.sum(FN),
 
             }
-            print("SHOULD BE 0: %d",FN.sum()+TP.sum() - len(gts))
+            if not FN.sum()+TP.sum() - len(gts) == 0:
+                raise RuntimeWarning(
+                    'FN+TP!=Total if you get this warning please contact Yuval')
             ret.append(r)
         return ret
 
