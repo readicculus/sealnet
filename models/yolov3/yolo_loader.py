@@ -1,16 +1,13 @@
 import os
-import pickle
-import sys
 
 import torch
 from PIL import Image
-from torch.utils.data import Dataset
 from torch.utils import data as data_utils
 import numpy as np
 from torchvision.transforms import transforms
 import torch.nn.functional as F
 
-from models.ConfigDataset import ConfigDataset
+from models.yolov3.ConfigDataset import ConfigDataset
 from utils.augmentations import horisontal_flip
 
 def pad_to_square(img, pad_value):
