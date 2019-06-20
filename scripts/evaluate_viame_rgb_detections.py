@@ -7,7 +7,9 @@ from metrics.Evaluator import Evaluator
 from metrics.utils import CoordinatesType
 
 import argparse
-
+# An example detection results file can be found at
+# https://drive.google.com/file/d/18PzWcAUwu9kdagB1Cz4XmH5r6kJdvx2p/view?usp=sharing
+# which can be evaluated against data/updated_seals.csv in this repo
 parser = argparse.ArgumentParser(description='Evaluate RGB Detectors.')
 parser.add_argument('--gts', help='Ground Truth CSV Path')
 parser.add_argument('--dets', help='Viame Detections CSV Path')

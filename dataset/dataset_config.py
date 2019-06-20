@@ -2,10 +2,10 @@ import os
 
 from torchvision.transforms import Compose
 
-from dataset.transforms.filter_transforms import transform_removed, transform_updated, transform_seal_only
-from dataset.utils import get_git_revisions_hash, obj
+from transforms.filter_transforms import transform_removed, transform_updated, transform_seal_only
+from utils import get_git_revisions_hash, obj
 
-config = {
+config = obj({
     "chip_size" : [640,640],
     "dataset": "optical",
     "types": ["optical", "ir", "registered"],
@@ -19,10 +19,7 @@ config = {
     "optical_dir": "TrainingAnimals_ColorImages",
     "hash": get_git_revisions_hash(),
     "system": {
-        "train_list": "train.txt",
-        "test_list": "test.txt"
+        "train_list": "train.csv",
+        "test_list": "test.csv"
     }
-}
-
-
-config = obj(config)
+})
