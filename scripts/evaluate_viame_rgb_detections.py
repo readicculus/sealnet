@@ -11,8 +11,8 @@ import argparse
 # https://drive.google.com/file/d/18PzWcAUwu9kdagB1Cz4XmH5r6kJdvx2p/view?usp=sharing
 # which can be evaluated against data/updated_seals.csv in this repo
 parser = argparse.ArgumentParser(description='Evaluate RGB Detectors.')
-parser.add_argument('--gts', help='Ground Truth CSV Path')
-parser.add_argument('--dets', help='Viame Detections CSV Path')
+parser.add_argument('--gts', help='Ground Truth CSV Path', required=True)
+parser.add_argument('--dets', help='Viame Detections CSV Path', required=True)
 parser.add_argument('--nms', default=.5, help='nms threshold', type=float)
 parser.add_argument('--iou', default=.5, help='iou threshold', type=float)
 parser.add_argument('--conf', default=0.0, help='minimum confidence threshold', type=float)
