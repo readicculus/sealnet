@@ -18,5 +18,8 @@ To setup run:
     ├── setup.py               # project path/dependency setup stuff
     └── README.md
 
+This current project still in early stages but main idea is to be able to easily keep track of data, models, and results which
+I have been struggling with in the previous repo.  The more specific short-term goal is label refinement and providing tools for 
+labeling new data with as little manual work as possible.
 
 Old project: https://github.com/readicculus/Bears-n-Seals
