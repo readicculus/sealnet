@@ -1,6 +1,7 @@
 numpy
 pandas
 matplotlib
-pickle
 argparse
 imgaug==0.2.9
+torch==1.1.0
+torchvision==0.3.0
