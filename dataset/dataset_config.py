@@ -15,7 +15,9 @@ config = obj({
     transform_removed,
     transform_updated,
     transform_seal_only
-]),
+    ]),
+    "image_augmentations": Compose([
+    ]),
     "optical_dir": "TrainingAnimals_ColorImages",
     "hash": get_git_revisions_hash(),
     "system": {

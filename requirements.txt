@@ -1,0 +1,6 @@
+numpy
+pandas
+matplotlib
+pickle
+argparse
+imgaug==0.2.9

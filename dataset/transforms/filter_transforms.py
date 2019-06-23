@@ -7,7 +7,8 @@ def transform_updated(data):
 def transform_seal_only(data):
    return data[data.species_id.str.contains("Seal")]
 
-def transorm_remove_unk_seal(data):
+
+def transform_remove_unk_seal(data):
     return data[~data.species_id.str.contains("UNK Seal")]
 
 
