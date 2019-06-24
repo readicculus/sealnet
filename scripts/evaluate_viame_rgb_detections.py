@@ -67,6 +67,8 @@ with open(DETECTIONS_CSV) as f:
             label = "Ringed Seal"
         if "bearded" in label:
             label = "Bearded Seal"
+        if "unk" in label:
+            label = "UNK Seal"
         if DETECTION_ONLY:
             label = "Seal"
         bbox = BoundingBox(imageName=img_name, classId=label,
