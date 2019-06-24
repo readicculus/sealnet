@@ -13,9 +13,7 @@ import sys
 from collections import Counter
 
 import matplotlib.pyplot as plt
-import numpy as np
 
-from .BoundingBox import  *
 from .BoundingBoxes import *
 from .utils import *
 
@@ -64,7 +62,8 @@ class Evaluator:
                 groundTruths.append([
                     bb.getImageName(),
                     bb.getClassId(), 1,
-                    bb.getAbsoluteBoundingBox(BBFormat.XYX2Y2)
+                    bb.getAbsoluteBoundingBox(BBFormat.XYX2Y2),
+                    bb.getHsId()
                 ])
             else:
                 if bb.getConfidence() < CONFIDENCE_THRESH:
@@ -73,7 +72,8 @@ class Evaluator:
                     bb.getImageName(),
                     bb.getClassId(),
                     bb.getConfidence(),
-                    bb.getAbsoluteBoundingBox(BBFormat.XYX2Y2)
+                    bb.getAbsoluteBoundingBox(BBFormat.XYX2Y2),
+                    None
                 ])
             # get class
             if bb.getClassId() not in classes:
@@ -91,7 +91,7 @@ class Evaluator:
             npos = len(gts)
             # sort detections by decreasing confidence
             dects = sorted(dects, key=lambda conf: conf[2], reverse=True)
-            TP = np.zeros(len(dects))
+            TP_idx_match = np.zeros(len(dects)) - 1
             FP = np.zeros(len(dects))
             TP_idxs = np.zeros(len(gts))
 
@@ -120,7 +120,7 @@ class Evaluator:
                 # Assign detection as true positive/don't care/false positive
                 if iouMax >= IOUThreshold:
                     if det[dects[d][0]][jmax] == 0:
-                        TP[d] = 1  # count as true positive
+                        TP_idx_match[d] = idxs[jmax]  # count as true positive
                         TP_idxs[idxs[jmax]] = 1
                         det[dects[d][0]][jmax] = 1  # flag as already 'seen'
                         # print("TP")
@@ -131,29 +131,26 @@ class Evaluator:
                 else:
                     FP[d] = 1  # count as false positive
                     # print("FP")
-            # compute precision, recall and average precision
-            acc_FP = np.cumsum(FP)
-            acc_TP = np.cumsum(TP)
-            rec = acc_TP / npos
-            prec = np.divide(acc_TP, (acc_FP + acc_TP))
-            # Depending on the method, call the right implementation
-            if method == MethodAveragePrecision.EveryPointInterpolation:
-                [ap, mpre, mrec, ii] = Evaluator.CalculateAveragePrecision(rec, prec)
-            else:
-                [ap, mpre, mrec, _] = Evaluator.ElevenPointInterpolatedAP(rec, prec)
-            # add class result in the dictionary to be returned
+
             FN = (~TP_idxs.astype(np.bool)).astype(np.float)
+            TP = (TP_idxs.astype(np.bool)).astype(np.float)
+            TP_idx_match = TP_idx_match.astype(np.int)
+
+            TP_MATCHES = []
+            for i in range(len(TP_idx_match)):
+                idx = TP_idx_match[i]
+                det = dects[i]
+                if idx != -1:
+                    hsId = gts[idx][4]
+                    TP_MATCHES.append((hsId, det))
+
             r = {
                 'class': c,
-                'precision': prec,
-                'recall': rec,
-                'AP': ap,
-                'interpolated precision': mpre,
-                'interpolated recall': mrec,
                 'total positives': npos,
                 'total TP': np.sum(TP),
                 'total FP': np.sum(FP),
                 'total FN': np.sum(FN),
+                'TPmatches': TP_MATCHES,
 
             }
             if not FN.sum()+TP.sum() - len(gts) == 0:

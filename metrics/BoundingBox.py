@@ -13,7 +13,8 @@ class BoundingBox:
                  imgSize=None,
                  bbType=BBType.GroundTruth,
                  classConfidence=None,
-                 format=BBFormat.XYWH):
+                 format=BBFormat.XYWH,
+                 hsId = None):
         """Constructor.
         Args:
             imageName: String representing the image name.
@@ -51,6 +52,7 @@ class BoundingBox:
         self._bbType = bbType
         self._classId = classId
         self._format = format
+        self._hsId = hsId
 
         # If relative coordinates, convert to absolute values
         # For relative coords: (x,y,w,h)=(X_center/img_width , Y_center/img_height)
@@ -106,6 +108,11 @@ class BoundingBox:
 
     def getImageName(self):
         return self._imageName
+
+    def getHsId(self):
+        if self._bbType != BBType.GroundTruth:
+            raise RuntimeWarning("Only GroundTruth type boxes have a hotspotId")
+        return self._hsId
 
     def getConfidence(self):
         return self._classConfidence

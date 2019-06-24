@@ -77,6 +77,7 @@ with open(DETECTIONS_CSV) as f:
         bounding_boxes.addBoundingBox(bbox)
 bounding_boxes=bounding_boxes.nms(NMS_THRESH, CONFIDENCE_THRESH) # NMS Step
 for index, row in ground_truth_data.iterrows():
+    hsId = row["hotspot_id"]
     x1 = row[x1_col]
     x2 = row[x2_col]
     y1 = row[y1_col]
@@ -87,7 +88,7 @@ for index, row in ground_truth_data.iterrows():
         label = "Seal"
     bbox = BoundingBox(imageName=img_name, classId=label,
                        x=x1, y=y1, w=x2, h=y2, typeCoordinates=CoordinatesType.Absolute,
-                       bbType=BBType.GroundTruth, format=BBFormat.XYX2Y2
+                       bbType=BBType.GroundTruth, format=BBFormat.XYX2Y2, hsId=hsId
                        )
 
     bounding_boxes.addBoundingBox(bbox)
