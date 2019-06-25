@@ -17,6 +17,7 @@ parser.add_argument('--nms', default=.5, help='nms threshold', type=float)
 parser.add_argument('--iou', default=.5, help='iou threshold', type=float)
 parser.add_argument('--conf', default=0.0, help='minimum confidence threshold', type=float)
 parser.add_argument('--detectiononly', dest='detectiononly', action='store_true', help='minimum confidence threshold')
+parser.add_argument('--updated_csv', dest='updated_csv', action='store_true', help='for Yuvals updated csv only')
 
 args = parser.parse_args()
 
@@ -26,16 +27,24 @@ NMS_THRESH = args.nms
 IOUThreshold = args.iou
 CONFIDENCE_THRESH = args.conf
 DETECTION_ONLY = args.detectiononly
+YUVALS_CSV = args.updated_csv
 
-
-x1_col, x2_col, y1_col, y2_col = "updated_left","updated_right","updated_top","updated_bottom"  # Use for files w/my udpated labels
-# x1_col, x2_col, y1_col, y2_col = "color_left","color_right","color_top","color_bottom"  # Use for original NOAA format
 
 # READ DATA FROM BOTH FILES INTO PANDAS
 ground_truth_data = pd.read_csv(GROUND_TRUTH_CSV, dtype={'hotspot_id': object})
+
+x1_col, x2_col, y1_col, y2_col = "color_left","color_right","color_top","color_bottom"  # Use for original NOAA format
 numeric_cols = ["thermal_x", "thermal_y", "color_left", "color_top",
-                "color_right", "color_bottom", "updated_left",
-                "updated_top", "updated_right", "updated_bottom"]
+                "color_right", "color_bottom"]
+
+# My updated labels file has different headers for box label bounds
+if YUVALS_CSV:
+    x1_col, x2_col, y1_col, y2_col = "updated_left", "updated_right", "updated_top", "updated_bottom"  # Use for files w/my udpated labels
+
+    numeric_cols = ["thermal_x", "thermal_y", "color_left", "color_top",
+                    "color_right", "color_bottom", "updated_left",
+                    "updated_top", "updated_right", "updated_bottom"]
+
 ground_truth_data[numeric_cols] = \
     ground_truth_data[numeric_cols].apply(pd.to_numeric)
 
@@ -99,6 +108,10 @@ for index, row in ground_truth_data.iterrows():
 evaluator = Evaluator()
 metrics = evaluator.GetPascalVOCMetrics(bounding_boxes, IOUThreshold=IOUThreshold,
                                         CONFIDENCE_THRESH=CONFIDENCE_THRESH)
+print("Ground truth file: %s" % GROUND_TRUTH_CSV)
+print("VIAME detections file: %s" % DETECTIONS_CSV)
+print("NMS %.3f - IOU %.3f - CONFIDENCE %.3f" % (NMS_THRESH, IOUThreshold, CONFIDENCE_THRESH))
+print()
 for class_met in metrics:
     label = class_met['class']
     print("%s:"%label)
@@ -110,6 +123,7 @@ for class_met in metrics:
         continue
     precision = tps/(tps+fps)
     recall = tps / (tps+fns)
+    print("TP %d - FP %d - FN %d" % (int(tps),int(fps),int(fns)))
     print("Precision: %f" % precision)
     print("Recall: %f" % recall)
     print("")
