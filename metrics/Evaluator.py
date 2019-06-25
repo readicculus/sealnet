@@ -137,13 +137,30 @@ class Evaluator:
             TP = (TP_idxs.astype(np.bool)).astype(np.float)
             TP_idx_match = TP_idx_match.astype(np.int)
 
-            TP_MATCHES = []
+            # Generate objects
+            TP_items = []
             for i in range(len(TP_idx_match)):
                 idx = TP_idx_match[i]
                 det = dects[i]
                 if idx != -1:
                     hsId = gts[idx][4]
-                    TP_MATCHES.append((hsId, det))
+                    TP_items.append({'groundtruth_hs_id':hsId,'image': det[0], 'label':det[1], 'confidence':det[2],
+                                       'left':det[3][0],
+                                       'top':det[3][1],
+                                       'right':det[3][2],
+                                       'bottom':det[3][3]
+                                       })
+            FP_arr = np.array(dects)[np.argwhere(FP > 0).flatten().tolist()]
+            FP_items = []
+            for det in FP_arr:
+                FP_items.append({'image': det[0], 'label': det[1], 'confidence': det[2],
+                                 'left': det[3][0],
+                                 'top': det[3][1],
+                                 'right': det[3][2],
+                                 'bottom': det[3][3]
+                                 })
+                x=1
+
 
             r = {
                 'class': c,
@@ -151,7 +168,8 @@ class Evaluator:
                 'total TP': np.sum(TP),
                 'total FP': np.sum(FP),
                 'total FN': np.sum(FN),
-                'TPmatches': TP_MATCHES,
+                'TP_items': TP_items,
+                'FP_items': FP_items
 
             }
             if not FN.sum()+TP.sum() - len(gts) == 0:

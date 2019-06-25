@@ -111,11 +111,13 @@ metrics = evaluator.GetPascalVOCMetrics(bounding_boxes, IOUThreshold=IOUThreshol
 print("Ground truth file: %s" % GROUND_TRUTH_CSV)
 print("VIAME detections file: %s" % DETECTIONS_CSV)
 print("NMS %.3f - IOU %.3f - CONFIDENCE %.3f" % (NMS_THRESH, IOUThreshold, CONFIDENCE_THRESH))
-print()
+print("\n\n")
 
 all_tps = []
+all_fps = []
 for class_met in metrics:
-    all_tps += class_met['TPmatches']
+    all_tps += class_met['TP_items']
+    all_fps += class_met['FP_items']
     label = class_met['class']
     print("%s:"%label)
     tps = class_met["total TP"]
@@ -131,6 +133,13 @@ for class_met in metrics:
     print("Recall: %f" % recall)
     print("")
 
-x=1
-# evaluator.PlotPrecisionRecallCurve(bounding_boxes, IOUThreshold=IOUThreshold, showAP=True)
-# x=1
+tps_df = pd.DataFrame(all_tps)
+fps_df = pd.DataFrame(all_fps)
+tps_df = tps_df.sort_values('image')
+fps_df = fps_df.sort_values('image')
+tps_df = tps_df.reset_index(drop=True)
+fps_df = fps_df.reset_index(drop=True)
+tps_df = tps_df[['image','label','confidence','left','bottom','right','top','groundtruth_hs_id']]
+fps_df = fps_df[['image','label','confidence','left','bottom','right','top']]
+tps_df.to_csv("tps.csv")
+fps_df.to_csv("fps.csv")
