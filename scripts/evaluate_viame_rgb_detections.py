@@ -115,9 +115,11 @@ print("\n\n")
 
 all_tps = []
 all_fps = []
+all_fns = []
 for class_met in metrics:
     all_tps += class_met['TP_items']
     all_fps += class_met['FP_items']
+    all_fns += class_met['FN_items']
     label = class_met['class']
     print("%s:"%label)
     tps = class_met["total TP"]
@@ -135,6 +137,7 @@ for class_met in metrics:
 
 tps_df = pd.DataFrame(all_tps)
 fps_df = pd.DataFrame(all_fps)
+
 tps_df = tps_df.sort_values('image')
 fps_df = fps_df.sort_values('image')
 tps_df = tps_df.reset_index(drop=True)
@@ -143,3 +146,8 @@ tps_df = tps_df[['image','label','confidence','left','bottom','right','top','gro
 fps_df = fps_df[['image','label','confidence','left','bottom','right','top']]
 tps_df.to_csv("tps.csv")
 fps_df.to_csv("fps.csv")
+
+
+# False negatives gets saved as original ground truth csv format with only hotspots that are fns
+fns_df = ground_truth_data.loc[ground_truth_data['hotspot_id'].isin(all_fns)]
+fns_df.to_csv("fns.csv")

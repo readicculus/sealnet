@@ -25,30 +25,6 @@ class Evaluator:
                             IOUThreshold=0.5,
                             method=MethodAveragePrecision.EveryPointInterpolation,
                             CONFIDENCE_THRESH = 0.0):
-        """Get the metrics used by the VOC Pascal 2012 challenge.
-        Get
-        Args:
-            boundingboxes: Object of the class BoundingBoxes representing ground truth and detected
-            bounding boxes;
-            IOUThreshold: IOU threshold indicating which detections will be considered TP or FP
-            (default value = 0.5);
-            method (default = EveryPointInterpolation): It can be calculated as the implementation
-            in the official PASCAL VOC toolkit (EveryPointInterpolation), or applying the 11-point
-            interpolatio as described in the paper "The PASCAL Visual Object Classes(VOC) Challenge"
-            or EveryPointInterpolation"  (ElevenPointInterpolation);
-        Returns:
-            A list of dictionaries. Each dictionary contains information and metrics of each class.
-            The keys of each dictionary are:
-            dict['class']: class representing the current dictionary;
-            dict['precision']: array with the precision values;
-            dict['recall']: array with the recall values;
-            dict['AP']: average precision;
-            dict['interpolated precision']: interpolated precision values;
-            dict['interpolated recall']: interpolated recall values;
-            dict['total positives']: total number of ground truth positives;
-            dict['total TP']: total number of True Positive detections;
-            dict['total FP']: total number of False Negative detections;
-        """
         ret = []  # list containing metrics (precision, recall, average precision) of each class
         # List with all ground truths (Ex: [imageName,class,confidence=1, (bb coordinates XYX2Y2)])
         groundTruths = []
@@ -118,7 +94,7 @@ class Evaluator:
                     if iou > iouMax:
                         iouMax = iou
                         jmax = j
-                # Assign detection as true positive/don't care/false positive
+                # Assign detection a    s true positive/don't care/false positive
                 if iouMax >= IOUThreshold:
                     if det[dects[d][0]][jmax] == 0:
                         TP_idx_match[d] = idxs[jmax]  # count as true positive
@@ -139,6 +115,9 @@ class Evaluator:
 
             # Generate objects
             TP_items = []
+            FN_items = np.array(gts,dtype=object)[FN.astype(np.bool)][:,4].tolist()
+            FP_items = []
+
             for i in range(len(TP_idx_match)):
                 idx = TP_idx_match[i]
                 det = dects[i]
@@ -150,17 +129,13 @@ class Evaluator:
                                        'right':det[3][2],
                                        'bottom':det[3][3]
                                        })
-            FP_arr = np.array(dects)[np.argwhere(FP > 0).flatten().tolist()]
-            FP_items = []
-            for det in FP_arr:
-                FP_items.append({'image': det[0], 'label': det[1], 'confidence': det[2],
-                                 'left': det[3][0],
-                                 'top': det[3][1],
-                                 'right': det[3][2],
-                                 'bottom': det[3][3]
-                                 })
-                x=1
-
+                else: # False negative
+                    FP_items.append({'image': det[0], 'label': det[1], 'confidence': det[2],
+                                     'left': det[3][0],
+                                     'top': det[3][1],
+                                     'right': det[3][2],
+                                     'bottom': det[3][3]
+                                     })
 
             r = {
                 'class': c,
@@ -169,7 +144,8 @@ class Evaluator:
                 'total FP': np.sum(FP),
                 'total FN': np.sum(FN),
                 'TP_items': TP_items,
-                'FP_items': FP_items
+                'FP_items': FP_items,
+                'FN_items': FN_items
 
             }
             if not FN.sum()+TP.sum() - len(gts) == 0:
