@@ -112,7 +112,10 @@ print("Ground truth file: %s" % GROUND_TRUTH_CSV)
 print("VIAME detections file: %s" % DETECTIONS_CSV)
 print("NMS %.3f - IOU %.3f - CONFIDENCE %.3f" % (NMS_THRESH, IOUThreshold, CONFIDENCE_THRESH))
 print()
+
+all_tps = []
 for class_met in metrics:
+    all_tps += class_met['TPmatches']
     label = class_met['class']
     print("%s:"%label)
     tps = class_met["total TP"]
@@ -127,5 +130,7 @@ for class_met in metrics:
     print("Precision: %f" % precision)
     print("Recall: %f" % recall)
     print("")
+
+x=1
 # evaluator.PlotPrecisionRecallCurve(bounding_boxes, IOUThreshold=IOUThreshold, showAP=True)
 # x=1
