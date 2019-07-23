@@ -47,7 +47,10 @@ def create_tf_record(m, img_filename, encoded_image_data):
         xmaxs.append(hs.x2 / im_width)
         ymaxs.append(hs.y2 / im_height)
         labels.append(class_id)
-
+        if not (hs.x1 < hs.x2):
+            raise Exception("X1 is not less than X2")
+        if not (hs.y1 < hs.y2):
+            raise Exception("Y1 is not less than Y2")
     tf_example = tf.train.Example(features=tf.train.Features(feature={
         'image/height': dataset_util.int64_feature(im_height.astype(int)),
         'image/width': dataset_util.int64_feature(im_width.astype(int)),
@@ -62,7 +65,7 @@ def create_tf_record(m, img_filename, encoded_image_data):
         'image/object/class/label': dataset_util.int64_list_feature(labels),
     }))
     return tf_example
-def yolo_labels(meta, base):
+def generate_records(meta, base):
     unique_classes = set()
     num_shards = 100
     output_filebase = os.path.join(base, 'tf.record')
@@ -92,5 +95,5 @@ def yolo_labels(meta, base):
 
 
 
-unique_train = yolo_labels(train_meta, train_base)
-unique_test = yolo_labels(test_meta, test_base)
+unique_train = generate_records(train_meta, train_base)
+unique_test = generate_records(test_meta, test_base)
