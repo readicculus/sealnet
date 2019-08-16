@@ -14,7 +14,7 @@ config = obj({
     "transforms": Compose([
     transform_removed,
     transform_updated,
-    transform_seal_only,
+    transform_seal_and_pb_only,
     transform_remove_unk_seal,
     transform_remove_bad_res,
     transform_remove_off_edge

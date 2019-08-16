@@ -14,6 +14,9 @@ def transform_seal_only(data):
    return data[data.species_id.str.contains("Seal")]
 
 
+def transform_seal_and_pb_only(data):
+   return data[data.species_id.str.contains("Seal") | data.species_id.str.contains("Polar Bear")]
+
 def transform_remove_unk_seal(data):
     return data[~data.species_id.str.contains("UNK Seal")]
 

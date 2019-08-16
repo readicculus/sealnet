@@ -3,7 +3,7 @@ from PIL import Image
 from torch.utils.data import Dataset
 import pandas as pd
 
-LABEL_NAMES = ["Ringed Seal", "Bearded Seal", "UNK Seal"]
+LABEL_NAMES = ["Ringed Seal", "Bearded Seal", "UNK Seal", "Polar Bear"]
 class SealDataset(Dataset):
     def __init__(self, csv_file, root_dir, transform=None, data_filters=None, image_transforms=None):
         self.current_sample = None

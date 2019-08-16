@@ -34,6 +34,8 @@ try:
 except:
     raise Exception("Could not load file " + pickle_file_path)
 
+LABELS = []
+
 train_base, test_base = get_train_test_base(config)
 train_meta, test_meta = get_train_test_meta_data(config)
 
@@ -66,7 +68,11 @@ def yolo_labels(meta, base):
             center_y = hs.center_y/h
             box_w = hs.width/w
             box_h = hs.height/h
-            class_id = hs.label[0]
+            lbl_idx = hs.label[0]
+            label = LABEL_NAMES[lbl_idx]
+            if not label in LABELS:
+                LABELS.append(label)
+            class_id = LABELS.index(label)
             unique_classes.add(class_id)
             labels.append("%d %.10f %.10f %.10f %.10f" % (class_id, center_x, center_y, box_w, box_h))
 
@@ -93,12 +99,13 @@ def image_list(meta, base, background_images, list_name = "yolo.labels"):
 
 def gen_data_file(train_list, test_list, classes):
     names_file = os.path.join(config.generated_data_base, str(config.dataset_id),"yolo.names")
+    backup_dir = os.path.join(config.generated_data_base, str(config.dataset_id),"backup")
     with open(names_file, 'w') as f:
         for c in classes:
-            f.write(LABEL_NAMES[c] + "\n")
+            f.write(LABELS[c] + "\n")
     data_content = \
         "classes = %d\ntrain  = %s\nvalid = %s\ntest  = %s\nnames  = %s\nbackup  = %s\n" \
-        % (len(classes), train_list, test_list, test_list, names_file, "s")
+        % (len(classes), train_list, test_list, test_list, names_file, backup_dir)
     data_file = os.path.join(config.generated_data_base, str(config.dataset_id),"yolo.data")
 
     with open(data_file, 'w') as f:

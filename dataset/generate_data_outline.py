@@ -33,7 +33,7 @@ filehandler = open(os.path.join(dataset_base,"config.pickle"), 'wb')
 pickle.dump(config, filehandler)
 
 
-seal_dataset = SealDataset(csv_file='data/TrainingAnimals_WithSightings_updating.csv',
+seal_dataset = SealDataset(csv_file='data/updated_seals_and_bears.csv',
                            root_dir='/data/raw_data/TrainingAnimals_ColorImages/', data_filters=config.transforms)
 
 train, test = test_train_split_by_image(seal_dataset, TEST_TRAIN_SPLIT)
