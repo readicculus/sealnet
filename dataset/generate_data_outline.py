@@ -19,10 +19,14 @@ args = parser.parse_args()
 TEST_TRAIN_SPLIT = args.split
 
 raw_image_path = os.path.join(config.raw_data_base, config.optical_dir)
-
-dataset_id = len([f for f in os.listdir(config.generated_data_base) if not "." in f])
-dataset_base = os.path.join(config.generated_data_base, str(dataset_id))
+datasets = [f for f in os.listdir(config.generated_data_base) if not "." in f]
+name = config.name
+datasets = [f for f in datasets if name in f]
+dataset_id = len(datasets)
+dataset_folder = name+"_%d"%dataset_id
+dataset_base = os.path.join(config.generated_data_base, dataset_folder)
 config.dataset_id = dataset_id
+config.dataset_path = dataset_folder
 
 if not os.path.exists(dataset_base):
     os.makedirs(dataset_base)

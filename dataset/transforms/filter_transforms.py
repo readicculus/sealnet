@@ -21,3 +21,5 @@ def transform_remove_unk_seal(data):
     return data[~data.species_id.str.contains("UNK Seal")]
 
 
+def transform_remove_shadow_annotations(data):
+    return data[~data.hotspot_id.str.endswith("s")]

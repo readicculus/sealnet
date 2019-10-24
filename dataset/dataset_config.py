@@ -6,6 +6,7 @@ from transforms.filter_transforms import *
 from utils import get_git_revisions_hash, obj
 
 config = obj({
+    "name": "PB-S",  # PB-S for polar bear and seal, PB for only polar bear, S for only seal
     "chip_size" : [416,416],
     "dataset": "optical",
     "types": ["optical", "ir", "registered"],
@@ -17,7 +18,8 @@ config = obj({
     transform_seal_and_pb_only,
     transform_remove_unk_seal,
     transform_remove_bad_res,
-    transform_remove_off_edge
+    transform_remove_off_edge,
+    transform_remove_shadow_annotations
     ]),
     "image_augmentations": Compose([
     ]),
@@ -27,5 +29,5 @@ config = obj({
         "train_list": "train.csv",
         "test_list": "test.csv"
     },
-    "description": ""
+    "description": "Polar Bear and Seal"
 })

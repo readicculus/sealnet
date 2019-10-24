@@ -1,6 +1,6 @@
-from metrics.Evaluator import Evaluator
-from .BoundingBox import *
-from .utils import *
+from Evaluator import Evaluator
+from BoundingBox import *
+from utils import *
 import numpy as np
 
 

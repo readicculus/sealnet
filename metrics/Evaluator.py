@@ -15,8 +15,8 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-from .BoundingBoxes import *
-from .utils import *
+from BoundingBoxes import *
+from utils import *
 
 
 class Evaluator:

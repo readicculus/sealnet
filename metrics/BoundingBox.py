@@ -1,4 +1,5 @@
-from .utils import *
+from utils import *
+from utils import BBType, BBFormat, CoordinatesType
 
 
 class BoundingBox:

@@ -2,6 +2,7 @@ import argparse
 import os
 import pickle
 
+from csvloader import LABEL_NAMES
 from utils import get_train_test_meta_data
 
 parser = argparse.ArgumentParser(description='Process images for new dataset')
@@ -37,7 +38,8 @@ def print_overview(meta, type):
     print("Density: %.2f" % (total/len(meta)))
     for c in class_distribution:
         count = class_distribution[c]
-        print("%d: %d - %.2f%%" %(c, count, count/total * 100))
+        # in metadata file index is of LABEL_NAMES not same as yolo indexx
+        print("%s: %d - %.2f%%" %(LABEL_NAMES[c], count, count/total * 100))
 
 
 print_overview(train_meta, "Train")

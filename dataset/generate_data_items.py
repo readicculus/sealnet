@@ -33,7 +33,7 @@ if current_hash != config.hash:
     warnings.warn("Current git hash is not equal to config git hash")
 
 
-dataset_base = os.path.join(config.generated_data_base, str(config.dataset_id))
+dataset_base = os.path.join(config.generated_data_base, config.dataset_path)
 train_list = os.path.join(dataset_base, config.system.train_list)
 test_list = os.path.join(dataset_base, config.system.test_list)
 train_base = os.path.join(dataset_base, "train")

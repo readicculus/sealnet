@@ -12,7 +12,7 @@ class SealDataset(Dataset):
         numeric_cols = ["thermal_x", "thermal_y", "color_left", "color_top",
                           "color_right", "color_bottom", "updated_left",
                           "updated_top", "updated_right", "updated_bottom"]
-        self.data = pd.read_csv(csv_file, dtype={'hotspot_id': object})
+        self.data = pd.read_csv(csv_file, dtype={'hotspot_id': str})
         # cast numeric columns
         self.data[numeric_cols] = \
             self.data[numeric_cols].apply(pd.to_numeric)

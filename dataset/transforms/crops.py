@@ -72,7 +72,7 @@ def full_image_tile_crops(image, width=640, height=640):
     chips = []
     for i in range(ncols+1):
         for j in range(nrows+1):
-            dims = (j*stride_rows,j*stride_rows+height,i*stride_cols,i*stride_cols+width)
+            dims = [j*stride_rows,j*stride_rows+height,i*stride_cols,i*stride_cols+width]
             cropped_img = image[j*stride_rows:j*stride_rows+height,i*stride_cols:i*stride_cols+width]
             if cropped_img.shape[0] != height or cropped_img.shape[1] != width:
                 print("Sizes wrong")

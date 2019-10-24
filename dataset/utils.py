@@ -21,14 +21,14 @@ def get_git_revisions_hash():
      return subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip()
 
 def get_train_test_base(config):
-    dataset_base = os.path.join(config.generated_data_base, str(config.dataset_id))
+    dataset_base = os.path.join(config.generated_data_base, config.dataset_path)
     train_base = os.path.join(dataset_base, "train")
     test_base = os.path.join(dataset_base, "test")
     return train_base, test_base
 
 # get_train_test_list
 def get_train_test_meta_data(config):
-    dataset_base = os.path.join(config.generated_data_base, str(config.dataset_id))
+    dataset_base = os.path.join(config.generated_data_base, config.dataset_path)
 
     train_base = os.path.join(dataset_base, "train")
     test_base = os.path.join(dataset_base, "test")

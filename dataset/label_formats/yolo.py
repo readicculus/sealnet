@@ -98,15 +98,15 @@ def image_list(meta, base, background_images, list_name = "yolo.labels"):
     return list_file
 
 def gen_data_file(train_list, test_list, classes):
-    names_file = os.path.join(config.generated_data_base, str(config.dataset_id),"yolo.names")
-    backup_dir = os.path.join(config.generated_data_base, str(config.dataset_id),"backup")
+    names_file = os.path.join(config.generated_data_base, config.dataset_path,"yolo.names")
+    backup_dir = os.path.join(config.generated_data_base, config.dataset_path,"backup")
     with open(names_file, 'w') as f:
         for c in classes:
             f.write(LABELS[c] + "\n")
     data_content = \
         "classes = %d\ntrain  = %s\nvalid = %s\ntest  = %s\nnames  = %s\nbackup  = %s\n" \
         % (len(classes), train_list, test_list, test_list, names_file, backup_dir)
-    data_file = os.path.join(config.generated_data_base, str(config.dataset_id),"yolo.data")
+    data_file = os.path.join(config.generated_data_base, config.dataset_path,"yolo.data")
 
     with open(data_file, 'w') as f:
         f.write(data_content)
