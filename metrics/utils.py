@@ -2,7 +2,6 @@ from enum import Enum
 
 import cv2
 
-
 class MethodAveragePrecision(Enum):
     """
     Class representing if the coordinates are relative to the
@@ -123,3 +122,4 @@ def add_bb_into_image(image, bb, color=(255, 0, 0), thickness=2, label=None):
         cv2.putText(image, label, (xin_bb, yin_bb), font, fontScale, (0, 0, 0), fontThickness,
                     cv2.LINE_AA)
     return image
+

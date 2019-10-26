@@ -14,7 +14,9 @@ class BoundingBoxes:
         if not bb.getImageName() in self._images:
             self._images[bb.getImageName()] = []
         self._images[bb.getImageName()].append(bb)
-
+    def addBoundingBoxes(self, bbs):
+        for bb in bbs:
+            self.addBoundingBox(bb)
     def removeBoundingBox(self, _boundingBox):
         for d in self._boundingBoxes:
             if BoundingBox.compare(d, _boundingBox):
@@ -75,11 +77,13 @@ class BoundingBoxes:
 
     def drawAllBoundingBoxes(self, image, imageName):
         bbxes = self.getBoundingBoxesByImageName(imageName)
+        box_label = "%s %.4f" % (self.getClassId(), self._classConfidence)
+
         for bb in bbxes:
             if bb.getBBType() == BBType.GroundTruth:  # if ground truth
-                image = add_bb_into_image(image, bb, color=(0, 255, 0))  # green
+                image = add_bb_into_image(image, bb, color=(0, 255, 0), label=box_label)  # green
             else:  # if detection
-                image = add_bb_into_image(image, bb, color=(255, 0, 0))  # red
+                image = add_bb_into_image(image, bb, color=(255, 0, 0), label=box_label)  # red
         return image
 
     def nms(self, NMS_THRESH, CONFIDENCE_THRESH):
@@ -127,6 +131,12 @@ class BoundingBoxes:
                 newBoundingBoxes.addBoundingBox(box)
         return newBoundingBoxes
 
+    def filter_confidence(self, conf):
+        new = BoundingBoxes()
+        for bb in self._boundingBoxes:
+            if bb.getConfidence() >= conf or bb.getBBType() == BBType.GroundTruth:
+                new.addBoundingBox(bb)
+        return new
     # def drawAllBoundingBoxes(self, image):
     #     for gt in self.getBoundingBoxesByType(BBType.GroundTruth):
     #         image = add_bb_into_image(image, gt ,color=(0,255,0))

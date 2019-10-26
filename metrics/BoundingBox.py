@@ -15,7 +15,7 @@ class BoundingBox:
                  bbType=BBType.GroundTruth,
                  classConfidence=None,
                  format=BBFormat.XYWH,
-                 hsId = None):
+                 hsId = None, model = None):
         """Constructor.
         Args:
             imageName: String representing the image name.
@@ -48,7 +48,7 @@ class BoundingBox:
         # if classConfidence != None and (classConfidence < 0 or classConfidence > 1):
         # raise IOError('classConfidence value must be a real value between 0 and 1. Value: %f' %
         # classConfidence)
-
+        self._model = model
         self._classConfidence = classConfidence
         self._bbType = bbType
         self._classId = classId
@@ -76,8 +76,10 @@ class BoundingBox:
             if format == BBFormat.XYWH:
                 self._w = w
                 self._h = h
-                self._x2 = self._x + self._w
-                self._y2 = self._y + self._h
+                self._x = x - self._w/2
+                self._y = y - self._h/2
+                self._x2 = x + self._w/2
+                self._y2 = y + self._h/2
             else:  # format == BBFormat.XYX2Y2: <left> <top> <right> <bottom>.
                 self._x2 = w
                 self._y2 = h

@@ -370,18 +370,18 @@ class Evaluator:
         return [ap, rhoInterp, recallValues, None]
 
     # For each detections, calculate IOU with reference
-    @staticmethod
-    def _getAllIOUs(reference, detections):
+    # @staticmethod
+    def _getAllIOUs(self, reference, detections):
         ret = []
         bbReference = reference.getAbsoluteBoundingBox(BBFormat.XYX2Y2)
         # img = np.zeros((200,200,3), np.uint8)
-        for d in detections:
+        for i,d in enumerate(detections):
             bb = d.getAbsoluteBoundingBox(BBFormat.XYX2Y2)
             iou = Evaluator.iou(bbReference, bb)
             # Show blank image with the bounding boxes
             # img = add_bb_into_image(img, d, color=(255,0,0), thickness=2, label=None)
             # img = add_bb_into_image(img, reference, color=(0,255,0), thickness=2, label=None)
-            ret.append((iou, reference, d))  # iou, reference, detection
+            ret.append((iou, reference, d,i))  # iou, reference, detection
         # cv2.imshow("comparing",img)
         # cv2.waitKey(0)
         # cv2.destroyWindow("comparing")
