@@ -77,9 +77,9 @@ class BoundingBoxes:
 
     def drawAllBoundingBoxes(self, image, imageName):
         bbxes = self.getBoundingBoxesByImageName(imageName)
-        box_label = "%s %.4f" % (self.getClassId(), self._classConfidence)
 
         for bb in bbxes:
+            box_label = "%s %.4f" % (bb.getClassId(), bb._classConfidence)
             if bb.getBBType() == BBType.GroundTruth:  # if ground truth
                 image = add_bb_into_image(image, bb, color=(0, 255, 0), label=box_label)  # green
             else:  # if detection
@@ -110,7 +110,7 @@ class BoundingBoxes:
                     if a > NMS_THRESH:
                         duplicates[i2][i] = 2  # set to 2 if > NMS thresh
                     else:
-                        duplicates[i2][i] = 1 # set to 1 if already see so we don't check in reverse order
+                        duplicates[i2][i] = 1 # set to 1 if already see so we don't check same match twice
 
             good_idxs = np.ones(len(dets))
             if np.sum(duplicates) > 0:

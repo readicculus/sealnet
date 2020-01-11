@@ -1,3 +1,5 @@
+import sys
+
 import cv2
 import os
 
@@ -6,7 +8,6 @@ import pickle
 from matplotlib import pyplot as plt
 import matplotlib
 matplotlib.use("TkAgg")
-
 from utils import add_bb_into_image
 pkl_all_post_nms = "metrics/all_post_nms.pkl"
 pkl_file = "metrics/results.pkl"
@@ -36,10 +37,11 @@ def print_models(models):
 
 df = pd.read_csv("/home/yuval/Documents/XNOR/sealnet/models/darknet/full_detections.csv", delimiter='\t')
 unique_ims = set(df["file"].values[0:])
-models = {}
+root_model_dets_dict = {}
 
+# first convert inference output to pkl file that is a ditionary key:model_name value:BoundingBoxes(object)
 if os.path.exists(pkl_file):
-    # models = pickle.load(open(pkl_file, "rb"))
+    root_model_dets_dict = pickle.load(open(pkl_file, "rb"))
     pass
 else:
     for i, det in df.iloc[1:].iterrows():
@@ -51,27 +53,31 @@ else:
         y=det["y"]
         w=det["w"]
         h=det["h"]
-        if not model in models:
-            models[model] = BoundingBoxes()
+        if not model in root_model_dets_dict:
+            root_model_dets_dict[model] = BoundingBoxes()
 
         box = BoundingBox(imageName, label,x,y,w,h,
                           classConfidence=confidence, bbType=BBType.Detected, model=model)
-        models[model].addBoundingBox(box)
-    pickle.dump( models, open( pkl_file, "wb" ) )
+        root_model_dets_dict[model].addBoundingBox(box)
+    pickle.dump(root_model_dets_dict, open(pkl_file, "wb"))
 
-## PUT ALL BBOXES IN ONE LIST BUT FIRST NMS OVER INDAVIDUAL MODELS
-
+# for each model we use nms to remove redundant labels detected by that model
+# we then aggregate all detections across all models into one BoundingBoxes(object)
 if os.path.exists(pkl_all_post_nms):
     all_together = pickle.load(open(pkl_all_post_nms, "rb"))
 else:
     all_together = BoundingBoxes()
-    for model in models:
-        nms = models[model].nms(NMS_THRESH=.5, CONFIDENCE_THRESH=0.05)
+    for model in root_model_dets_dict:
+        nms = root_model_dets_dict[model].nms(NMS_THRESH=.5, CONFIDENCE_THRESH=0.1)
         for box in nms._boundingBoxes:
             all_together.addBoundingBox(box)
     pickle.dump(all_together, open(pkl_all_post_nms, "wb"))
 
-def bbs_ious(bbs1, bbs2, iou=0):
+# helper function that takes two lists of BoundingBox(object) where bbs1 is a list of detections for an image from one model
+# and bbs2 is a list of detections from a different model.  This function returns the matches between the two if the overlap
+# is greater than the given iou
+# the format of a single match is [bbs1 index, bss2 index, IOU] and this function returns a list of these matches
+def model_bbs_cross_correlation(bbs1, bbs2, iou=0):
     evaluator = Evaluator()
     # array of [bbs1 idx, bbs2 idx, iou]
     matches = []
@@ -86,59 +92,70 @@ pkl_cross_correlation = "metrics/post_cross_corelation.pkl"
 pkl_cross_correlation_nms = "metrics/post_cross_corelation_post_nms.pkl"
 good_bbs = BoundingBoxes()
 bad_bbs = BoundingBoxes()
-if os.path.exists(pkl_cross_correlation):
-    (good_bbs, bad_bbs) = pickle.load(open(pkl_all_post_nms, "rb"))
+if os.path.exists(pkl_cross_correlation) and False:
+    (good_bbs,bad_bbs) = pickle.load(open(pkl_cross_correlation, "rb"))
 else:
     for im_name in unique_ims:
         imbbs = all_together.getBoundingBoxesByImageName(im_name)
-        models = {}
+        root_model_dets_dict = {}
         for bb in imbbs:
-            if not bb._model in models:
-                models[bb._model] = []
-            models[bb._model].append(bb)
-        mks = list(models.keys())
-        match_dict = {}
+            if not bb._model in root_model_dets_dict:
+                root_model_dets_dict[bb._model] = []
+            root_model_dets_dict[bb._model].append(bb)
+        mks = list(root_model_dets_dict.keys())
+        # match_dict is a dictionary storing the cross correlation matches between models
+        # key: model1, value: dictionary{key: model2, value: matches...model3..}
+        # the dictionary contains duplicate matches for reverse
+        model_match_dict = {}
         for i in range(len(mks)):
             c=mks[i]
-            match_dict[c]={}
-            cmodel = models[mks[i]] #current model
+            model_match_dict[c]={}
+            c_root_dets = root_model_dets_dict[mks[i]] #current model
             others = mks[:i] + mks[i + 1:]
-            for o in others:
-                # if o in match_dict and c in match_dict[o]:
-                #     continue
-                omodel = models[o] # other model
-                matches = bbs_ious(cmodel, omodel,iou=.3)
-                match_dict[c][o] = matches
+            for o in others:  #to do check if reverse cross correlation already done
+                omodel = root_model_dets_dict[o] # other model
+                c_matches = model_bbs_cross_correlation(c_root_dets, omodel, iou=.5)
+                model_match_dict[c][o] = c_matches
 
-        for c in models:
-            matches = match_dict[c]
-            cmodel = models[c]
-            match_ct = [0]*len(cmodel)
-            for o in matches:
-                omatches = matches[o]
-                for match in omatches:
-                    match_ct[match[0]]+=1
-            for mct, box in zip(match_ct, cmodel):
-                if mct > 0 or box.getClassId() == "Polar Bear" or box.getConfidence() > .3:
+        for c in root_model_dets_dict: # c=current
+            c_matches = model_match_dict[c]
+            c_root_dets = root_model_dets_dict[c]
+            match_ct = [0]*len(c_root_dets)
+            for o in c_matches: # o=other (aka one we are comparing to)
+                matches = c_matches[o]
+                already_matched_idxs = []
+                for match in matches:
+                    box1_idx = match[0]
+                    if box1_idx in already_matched_idxs:
+                        # we only want our current bounding box to be matched once
+                        # todo we should ideally pic the match with largest iou
+                        continue
+                    already_matched_idxs.append(match[0])
+                    match_ct[box1_idx]+=1
+            for mct, box in zip(match_ct, c_root_dets):
+                if mct ==3 or \
+                        (mct > 1 and box.getConfidence() > .1) \
+                        or box.getClassId() == "Polar Bear" \
+                        or box.getConfidence() > .3:
                     good_bbs.addBoundingBox(box)
                 else:
                     bad_bbs.addBoundingBox(box)
-    pickle.dump(good_bbs, open(pkl_cross_correlation, "wb"))
+    pickle.dump((good_bbs,bad_bbs), open(pkl_cross_correlation, "wb"))
 
 good_bbs_nms = None
 if os.path.exists(pkl_cross_correlation_nms):
     good_bbs_nms = pickle.load(open(pkl_cross_correlation_nms, "rb"))
 else:
-    good_bbs_nms = good_bbs.nms(.5, 0.0) # already filtered confidence, now we filter nms over all models!!@
+    good_bbs_nms = good_bbs.nms(.5, 0.0) # already filtered confidence, now we filter nms over all models
     pickle.dump(good_bbs_nms, open(pkl_cross_correlation_nms, "wb"))
 
+plt_im = None
+fig = None
+# ground_truth_data = pd.read_csv("/home/yuval/Documents/XNOR/sealnet/data/updated_seals.csv", dtype={'hotspot_id': object})
 
 for im_name in unique_ims:
-    plt_im = None
-    fig = None
     im = cv2.imread(os.path.join("/data/raw_data/TrainingAnimals_ColorImages/", im_name))
-    good_bbs_nms.drawAllBoundingBoxes(im, im_name)
-
+    im=good_bbs_nms.drawAllBoundingBoxes(im, im_name)
     if plt_im is None:
         fig = plt.figure()
 
@@ -150,7 +167,7 @@ for im_name in unique_ims:
     plt.show()
     plt.pause(1)
     plt.cla()
-#
+# #
 #
 # print_models(models)
 # nms = {}

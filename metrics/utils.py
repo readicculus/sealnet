@@ -1,6 +1,8 @@
 from enum import Enum
 
 import cv2
+import numpy as np
+
 
 class MethodAveragePrecision(Enum):
     """
@@ -105,6 +107,7 @@ def add_bb_into_image(image, bb, color=(255, 0, 0), thickness=2, label=None):
     y2 = int(y2)
     cv2.rectangle(image, (x1, y1), (x2, y2), (b, g, r), thickness)
     # Add label
+
     if label is not None:
         # Get size of the text box
         (tw, th) = cv2.getTextSize(label, font, fontScale, fontThickness)[0]
@@ -116,8 +119,9 @@ def add_bb_into_image(image, bb, color=(255, 0, 0), thickness=2, label=None):
         r_Xin = x1 - int(thickness / 2)
         r_Yin = y1 - th - int(thickness / 2)
         # Draw filled rectangle to put the text in it
-        cv2.rectangle(image, (r_Xin, r_Yin - thickness),
-                      (r_Xin + tw + thickness * 3, r_Yin + th + int(12.5 * fontScale)), (b, g, r),
+
+        cv2.rectangle(image, (r_Xin, r_Yin),
+                      (r_Xin + tw + thickness * 3, r_Yin + th), (b, g, r),
                       -1)
         cv2.putText(image, label, (xin_bb, yin_bb), font, fontScale, (0, 0, 0), fontThickness,
                     cv2.LINE_AA)
