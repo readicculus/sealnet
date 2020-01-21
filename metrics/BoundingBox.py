@@ -135,6 +135,9 @@ class BoundingBox:
     def getBBType(self):
         return self._bbType
 
+    def getArea(self):
+        return self._w * self._h
+
     @staticmethod
     def compare(det1, det2):
         det1BB = det1.getAbsoluteBoundingBox()

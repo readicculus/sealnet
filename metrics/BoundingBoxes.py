@@ -2,6 +2,9 @@ from Evaluator import Evaluator
 from BoundingBox import *
 from utils import *
 import numpy as np
+import cv2
+
+from utils import bounding_box_list_to_matrix
 
 
 class BoundingBoxes:
@@ -82,11 +85,46 @@ class BoundingBoxes:
             box_label = "%s %.4f" % (bb.getClassId(), bb._classConfidence)
             if bb.getBBType() == BBType.GroundTruth:  # if ground truth
                 image = add_bb_into_image(image, bb, color=(0, 255, 0), label=box_label)  # green
-            else:  # if detection
+            elif bb.getBBType() == BBType.Detected:  # if detection
                 image = add_bb_into_image(image, bb, color=(255, 0, 0), label=box_label)  # red
+            elif bb.getBBType() == BBType.Ensemble:  # if detection
+                image = add_bb_into_image(image, bb, color=(0, 0, 255), label=box_label)  # red
         return image
 
-    def nms(self, NMS_THRESH, CONFIDENCE_THRESH):
+    #  https://github.com/pytorch/vision/issues/942
+    def nms(self, dets, scores, thresh):
+        '''
+        dets is a numpy array : num_dets, 4
+        scores ia  nump array : num_dets,
+        '''
+        x1 = dets[:, 0]
+        y1 = dets[:, 1]
+        x2 = dets[:, 2]
+        y2 = dets[:, 3]
+
+        areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+        order = scores.argsort()[::-1]  # get boxes with more ious first
+
+        keep = []
+        while order.size > 0:
+            i = order[0]  # pick maxmum iou box
+            keep.append(i)
+            xx1 = np.maximum(x1[i], x1[order[1:]])
+            yy1 = np.maximum(y1[i], y1[order[1:]])
+            xx2 = np.minimum(x2[i], x2[order[1:]])
+            yy2 = np.minimum(y2[i], y2[order[1:]])
+
+            w = np.maximum(0.0, xx2 - xx1 + 1)  # maximum width
+            h = np.maximum(0.0, yy2 - yy1 + 1)  # maxiumum height
+            inter = w * h
+            ovr = inter / (areas[i] + areas[order[1:]] - inter)
+
+            inds = np.where(ovr <= thresh)[0]
+            order = order[inds + 1]
+
+        return keep
+
+    def multi_class_nms(self, NMS_THRESH, CONFIDENCE_THRESH):
         if NMS_THRESH == 0:
             return self
         evaluator = Evaluator()
@@ -98,7 +136,42 @@ class BoundingBoxes:
         for img_idx,image in enumerate(images):
             bboxes = self.getBoundingBoxesByImageName(image)
             gts = [bb for bb in bboxes if bb.getBBType() == BBType.GroundTruth]
-            dets = [bb for bb in bboxes if bb.getBBType() == BBType.Detected and bb.getConfidence() >= CONFIDENCE_THRESH]
+            dets = [bb for bb in bboxes if bb.getBBType() == BBType.Detected or BBType == BBType.Ensemble and bb.getConfidence() >= CONFIDENCE_THRESH]
+            dets_by_class = {}
+            for bb in dets:
+                classId = bb.getClassId()
+                if not  classId in dets_by_class:
+                    dets_by_class[classId] = []
+                dets_by_class[classId].append(bb)
+            # nms by class
+            boxes_keep = []
+            for classId in dets_by_class.keys():
+                class_dets = dets_by_class[classId]
+                class_boxes, scores = bounding_box_list_to_matrix(class_dets)
+                keep_idxs = self.nms(class_boxes, scores, NMS_THRESH)
+
+                boxes_keep = boxes_keep + list(np.array(class_dets)[keep_idxs])
+
+            kept_boxes, scores = bounding_box_list_to_matrix(boxes_keep)
+            keep_idxs = self.nms(kept_boxes, scores, NMS_THRESH)
+            final_boxes_keep = list(np.array(boxes_keep)[keep_idxs])
+            print("NMS removed %d boxes from %s" % (len(dets) - len(final_boxes_keep), image))
+            newBoundingBoxes.addBoundingBoxes(final_boxes_keep)
+        return newBoundingBoxes
+
+    def nms_old(self, NMS_THRESH, CONFIDENCE_THRESH):
+        if NMS_THRESH == 0:
+            return self
+        evaluator = Evaluator()
+        images = set()
+        newBoundingBoxes = BoundingBoxes()
+
+        for bb in self._boundingBoxes:
+            images.add(bb.getImageName())
+        for img_idx,image in enumerate(images):
+            bboxes = self.getBoundingBoxesByImageName(image)
+            gts = [bb for bb in bboxes if bb.getBBType() == BBType.GroundTruth]
+            dets = [bb for bb in bboxes if bb.getBBType() == BBType.Detected or BBType == BBType.Ensemble and bb.getConfidence() >= CONFIDENCE_THRESH]
             duplicates = np.zeros((len(dets), len(dets)))
             for i, det in enumerate(dets):
                 det_abs = det.getAbsoluteBoundingBox(BBFormat.XYX2Y2)

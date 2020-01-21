@@ -68,7 +68,7 @@ if os.path.exists(pkl_all_post_nms):
 else:
     all_together = BoundingBoxes()
     for model in root_model_dets_dict:
-        nms = root_model_dets_dict[model].nms(NMS_THRESH=.5, CONFIDENCE_THRESH=0.1)
+        nms = root_model_dets_dict[model].nms_old(NMS_THRESH=.5, CONFIDENCE_THRESH=0.1)
         for box in nms._boundingBoxes:
             all_together.addBoundingBox(box)
     pickle.dump(all_together, open(pkl_all_post_nms, "wb"))

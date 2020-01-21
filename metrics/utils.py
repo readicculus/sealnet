@@ -37,6 +37,7 @@ class BBType(Enum):
     """
     GroundTruth = 1
     Detected = 2
+    Ensemble = 3
 
 
 class BBFormat(Enum):
@@ -127,3 +128,13 @@ def add_bb_into_image(image, bb, color=(255, 0, 0), thickness=2, label=None):
                     cv2.LINE_AA)
     return image
 
+def bounding_box_list_to_matrix(boxes):
+    class_boxes = []
+    scores = []
+    for d in boxes:
+        x1, y1, x2, y2 = d.getAbsoluteBoundingBox(BBFormat.XYX2Y2)
+        class_boxes.append([x1, y1, x2, y2])
+        scores.append(d.getConfidence())
+    class_boxes = np.array(class_boxes)
+    scores = np.array(scores)
+    return class_boxes, scores
