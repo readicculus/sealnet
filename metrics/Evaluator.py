@@ -11,10 +11,11 @@
 import os
 import sys
 from collections import Counter
-import numpy as np
 
 import matplotlib.pyplot as plt
+import numpy as np
 
+from BoundingBox import *
 from BoundingBoxes import *
 from utils import *
 
@@ -23,8 +24,31 @@ class Evaluator:
     def GetPascalVOCMetrics(self,
                             boundingboxes,
                             IOUThreshold=0.5,
-                            method=MethodAveragePrecision.EveryPointInterpolation,
-                            CONFIDENCE_THRESH = 0.0):
+                            method=MethodAveragePrecision.EveryPointInterpolation):
+        """Get the metrics used by the VOC Pascal 2012 challenge.
+        Get
+        Args:
+            boundingboxes: Object of the class BoundingBoxes representing ground truth and detected
+            bounding boxes;
+            IOUThreshold: IOU threshold indicating which detections will be considered TP or FP
+            (default value = 0.5);
+            method (default = EveryPointInterpolation): It can be calculated as the implementation
+            in the official PASCAL VOC toolkit (EveryPointInterpolation), or applying the 11-point
+            interpolatio as described in the paper "The PASCAL Visual Object Classes(VOC) Challenge"
+            or EveryPointInterpolation"  (ElevenPointInterpolation);
+        Returns:
+            A list of dictionaries. Each dictionary contains information and metrics of each class.
+            The keys of each dictionary are:
+            dict['class']: class representing the current dictionary;
+            dict['precision']: array with the precision values;
+            dict['recall']: array with the recall values;
+            dict['AP']: average precision;
+            dict['interpolated precision']: interpolated precision values;
+            dict['interpolated recall']: interpolated recall values;
+            dict['total positives']: total number of ground truth positives;
+            dict['total TP']: total number of True Positive detections;
+            dict['total FP']: total number of False Negative detections;
+        """
         ret = []  # list containing metrics (precision, recall, average precision) of each class
         # List with all ground truths (Ex: [imageName,class,confidence=1, (bb coordinates XYX2Y2)])
         groundTruths = []
@@ -39,18 +63,14 @@ class Evaluator:
                 groundTruths.append([
                     bb.getImageName(),
                     bb.getClassId(), 1,
-                    bb.getAbsoluteBoundingBox(BBFormat.XYX2Y2),
-                    bb.getHsId()
+                    bb.getAbsoluteBoundingBox(BBFormat.XYX2Y2)
                 ])
             else:
-                if bb.getConfidence() < CONFIDENCE_THRESH:
-                    continue
                 detections.append([
                     bb.getImageName(),
                     bb.getClassId(),
                     bb.getConfidence(),
-                    bb.getAbsoluteBoundingBox(BBFormat.XYX2Y2),
-                    None
+                    bb.getAbsoluteBoundingBox(BBFormat.XYX2Y2)
                 ])
             # get class
             if bb.getClassId() not in classes:
@@ -68,10 +88,8 @@ class Evaluator:
             npos = len(gts)
             # sort detections by decreasing confidence
             dects = sorted(dects, key=lambda conf: conf[2], reverse=True)
-            TP_idx_match = np.zeros(len(dects)) - 1
+            TP = np.zeros(len(dects))
             FP = np.zeros(len(dects))
-            TP_idxs = np.zeros(len(gts))
-
             # create dictionary with amount of gts for each image
             det = Counter([cc[0] for cc in gts])
             for key, val in det.items():
@@ -81,12 +99,7 @@ class Evaluator:
             for d in range(len(dects)):
                 # print('dect %s => %s' % (dects[d][0], dects[d][3],))
                 # Find ground truth image
-                gtidxs = [[idx,gt] for idx, gt in enumerate(gts) if gt[0] == dects[d][0]]
-                idxs = []
-                gt = []
-                for x in gtidxs:
-                    idxs.append(x[0])
-                    gt.append(x[1])
+                gt = [gt for gt in gts if gt[0] == dects[d][0]]
                 iouMax = sys.float_info.min
                 for j in range(len(gt)):
                     # print('Ground truth gt => %s' % (gt[j][3],))
@@ -94,11 +107,10 @@ class Evaluator:
                     if iou > iouMax:
                         iouMax = iou
                         jmax = j
-                # Assign detection a    s true positive/don't care/false positive
+                # Assign detection as true positive/don't care/false positive
                 if iouMax >= IOUThreshold:
                     if det[dects[d][0]][jmax] == 0:
-                        TP_idx_match[d] = idxs[jmax]  # count as true positive
-                        TP_idxs[idxs[jmax]] = 1
+                        TP[d] = 1  # count as true positive
                         det[dects[d][0]][jmax] = 1  # flag as already 'seen'
                         # print("TP")
                     else:
@@ -108,49 +120,28 @@ class Evaluator:
                 else:
                     FP[d] = 1  # count as false positive
                     # print("FP")
-
-            FN = (~TP_idxs.astype(np.bool)).astype(np.float)
-            TP = (TP_idxs.astype(np.bool)).astype(np.float)
-            TP_idx_match = TP_idx_match.astype(np.int)
-
-            # Generate objects
-            TP_items = []
-            FN_items = np.array(gts,dtype=object)[FN.astype(np.bool)][:,4].tolist()
-            FP_items = []
-
-            for i in range(len(TP_idx_match)):
-                idx = TP_idx_match[i]
-                det = dects[i]
-                if idx != -1:
-                    hsId = gts[idx][4]
-                    TP_items.append({'groundtruth_hs_id':hsId,'image': det[0], 'label':det[1], 'confidence':det[2],
-                                       'left':det[3][0],
-                                       'top':det[3][1],
-                                       'right':det[3][2],
-                                       'bottom':det[3][3]
-                                       })
-                else: # False negative
-                    FP_items.append({'image': det[0], 'label': det[1], 'confidence': det[2],
-                                     'left': det[3][0],
-                                     'top': det[3][1],
-                                     'right': det[3][2],
-                                     'bottom': det[3][3]
-                                     })
-
+            # compute precision, recall and average precision
+            acc_FP = np.cumsum(FP)
+            acc_TP = np.cumsum(TP)
+            rec = acc_TP / npos
+            prec = np.divide(acc_TP, (acc_FP + acc_TP))
+            # Depending on the method, call the right implementation
+            if method == MethodAveragePrecision.EveryPointInterpolation:
+                [ap, mpre, mrec, ii] = Evaluator.CalculateAveragePrecision(rec, prec)
+            else:
+                [ap, mpre, mrec, _] = Evaluator.ElevenPointInterpolatedAP(rec, prec)
+            # add class result in the dictionary to be returned
             r = {
                 'class': c,
+                'precision': prec,
+                'recall': rec,
+                'AP': ap,
+                'interpolated precision': mpre,
+                'interpolated recall': mrec,
                 'total positives': npos,
                 'total TP': np.sum(TP),
-                'total FP': np.sum(FP),
-                'total FN': np.sum(FN),
-                'TP_items': TP_items,
-                'FP_items': FP_items,
-                'FN_items': FN_items
-
+                'total FP': np.sum(FP)
             }
-            if not FN.sum()+TP.sum() - len(gts) == 0:
-                raise RuntimeWarning(
-                    'FN+TP!=Total if you get this warning please contact Yuval')
             ret.append(r)
         return ret
 
@@ -370,18 +361,18 @@ class Evaluator:
         return [ap, rhoInterp, recallValues, None]
 
     # For each detections, calculate IOU with reference
-    # @staticmethod
-    def _getAllIOUs(self, reference, detections):
+    @staticmethod
+    def _getAllIOUs(reference, detections):
         ret = []
         bbReference = reference.getAbsoluteBoundingBox(BBFormat.XYX2Y2)
         # img = np.zeros((200,200,3), np.uint8)
-        for i,d in enumerate(detections):
+        for d in detections:
             bb = d.getAbsoluteBoundingBox(BBFormat.XYX2Y2)
             iou = Evaluator.iou(bbReference, bb)
             # Show blank image with the bounding boxes
             # img = add_bb_into_image(img, d, color=(255,0,0), thickness=2, label=None)
             # img = add_bb_into_image(img, reference, color=(0,255,0), thickness=2, label=None)
-            ret.append((iou, reference, d,i))  # iou, reference, detection
+            ret.append((iou, reference, d))  # iou, reference, detection
         # cv2.imshow("comparing",img)
         # cv2.waitKey(0)
         # cv2.destroyWindow("comparing")

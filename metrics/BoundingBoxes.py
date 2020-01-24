@@ -1,4 +1,4 @@
-from Evaluator import Evaluator
+import  Evaluator
 from BoundingBox import *
 from utils import *
 import numpy as np
@@ -82,12 +82,14 @@ class BoundingBoxes:
         bbxes = self.getBoundingBoxesByImageName(imageName)
 
         for bb in bbxes:
-            box_label = "%s %.4f" % (bb.getClassId(), bb._classConfidence)
             if bb.getBBType() == BBType.GroundTruth:  # if ground truth
+                box_label = "%s" % (bb.getClassId())
                 image = add_bb_into_image(image, bb, color=(0, 255, 0), label=box_label)  # green
             elif bb.getBBType() == BBType.Detected:  # if detection
+                box_label = "%s %.4f" % (bb.getClassId(), bb._classConfidence)
                 image = add_bb_into_image(image, bb, color=(255, 0, 0), label=box_label)  # red
             elif bb.getBBType() == BBType.Ensemble:  # if detection
+                box_label = "%s %.4f" % (bb.getClassId(), bb._classConfidence)
                 image = add_bb_into_image(image, bb, color=(0, 0, 255), label=box_label)  # red
         return image
 
@@ -207,7 +209,7 @@ class BoundingBoxes:
     def filter_confidence(self, conf):
         new = BoundingBoxes()
         for bb in self._boundingBoxes:
-            if bb.getConfidence() >= conf or bb.getBBType() == BBType.GroundTruth:
+            if bb.getBBType() == BBType.GroundTruth or bb.getConfidence() >= conf:
                 new.addBoundingBox(bb)
         return new
     # def drawAllBoundingBoxes(self, image):
