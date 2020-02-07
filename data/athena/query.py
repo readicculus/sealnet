@@ -1,18 +1,18 @@
 import csv
 import os
+import pandas as pd
 
 import boto3
 import botocore
-from boto.file import Key
 from retrying import retry
-
+os.environ['AWS_DEFAULT_REGION'] = 'us-west-2'
 database = "sealnet"
 
 s3_bucket = "arcticseals-athena"
 s3_output = "s3://" + s3_bucket
 
 athena = boto3.client('athena')
-s3     = boto3.resource('s3')
+s3 = boto3.resource('s3')
 
 @retry(stop_max_attempt_number = 10,
     wait_exponential_multiplier = 300,
@@ -28,8 +28,18 @@ def poll_status(_id):
     else:
         raise Exception
 
-def run_query(query, database, s3_output,
-              delete_result_s3_query_obj = False):
+def cleanup_query(local_filename, s3_key):
+    # delete result file
+    if local_filename is not None and os.path.isfile(local_filename):
+        os.remove(local_filename)
+    if s3_key is not None:
+        try:
+            obj = s3.Object(s3_bucket, s3_key)
+            obj.delete()
+        except:
+            print("Unable to delete QueryObject")
+
+def run_query(query, database, s3_output):
     response = athena.start_query_execution(
         QueryString=query,
         QueryExecutionContext={
@@ -56,32 +66,19 @@ def run_query(query, database, s3_output,
                 print("The object does not exist.")
             else:
                 raise
-        if delete_result_s3_query_obj:
-            try:
-                obj = s3.Object(s3_bucket, s3_key)
-                obj.delete()
-            except:
-                print("Unable to delete QueryObject")
 
-        # read file to array
-        rows = []
-        with open(local_filename) as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                rows.append(row)
+        res = {
+            # "rows": rows,
+            "query_id":QueryExecutionId,
+            "s3_key": s3_key,
+            "local_filename": local_filename,
+            "query_response": response
+        }
+        return res
 
-        # delete result file
-        if os.path.isfile(local_filename):
-            os.remove(local_filename)
+def run_query_make_df(query, database, s3_output):
+    res = run_query(query, database, s3_output)
+    df = pd.read_csv(res["local_filename"])
+    res["df"] = df
+    return res
 
-        return rows
-
-if __name__ == '__main__':
-    # SQL Query to execute
-    query = ("SELECT * FROM lila_original")
-
-    print("Executing query: {}".format(query))
-    result = run_query(query, database, s3_output)
-
-    print("Results:")
-    print(result)
