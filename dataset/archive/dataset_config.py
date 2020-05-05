@@ -7,7 +7,7 @@ from utils import get_git_revisions_hash, obj
 
 config = obj({
     "name": "PB-S",  # PB-S for polar bear and seal, PB for only polar bear, S for only seal
-    "chip_size" : [416,416],
+    "chip_size" : [640,640],
     "dataset": "optical",
     "types": ["optical", "ir", "registered"],
     "generated_data_base": "/fast/generated_data/",

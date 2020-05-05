@@ -7,7 +7,7 @@ from PIL import Image
 from transforms.crops import crop_around_hotspots
 from utils import get_git_revisions_hash, Timer
 import pickle
-from csvloader import SealDataset
+from archive.dataloaders import SealDataset
 import argparse
 from imgaug import BoundingBox, BoundingBoxesOnImage
 
